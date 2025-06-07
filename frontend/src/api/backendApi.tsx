@@ -1,46 +1,41 @@
 import axios from 'axios';
 
-// Obtém a URL base da API das variáveis de ambiente definidas no .env
 const API_URL = import.meta.env.VITE_REACT_APP_API_URL;
 
 if (!API_URL) {
     console.error('VITE_REACT_APP_API_URL não está definido nas variáveis de ambiente.');
-    // Considere lançar um erro ou usar um fallback se a API_URL for crítica.
 }
 
-// Configuração da instância Axios
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    // Definir um timeout geral para todas as requisições se desejar, mas vamos focar na específica
+    // timeout: 30000, // Exemplo: 30 segundos
 });
-
-// --- Tipos de Dados (Interface) ---
-// Define as interfaces para os dados que a API retorna ou espera.
-// Adicione mais interfaces conforme necessário para outras entidades.
 
 export interface Lista {
     idLista: string;
     nomeLista: string;
-    relatorioGerado?: boolean; // Adicionado para a lista de relatórios
+    relatorioGerado?: boolean;
 }
 
 export interface ScanData {
-    config_id?: string; // ID do scan no Tenable.WAS
+    config_id?: string;
     name: string;
     target?: string;
-    description?: string; // Adicionado: Descrição da vulnerabilidade/scan
-    created_at?: string; // Adicionado: Data de criação do scan
+    description?: string;
+    created_at?: string;
     last_scan?: {
-        scan_id?: string; // Changed to optional as it might be missing
-        uuid?: string; // UUID do último scan (history_id no VM)
-        status?: string; // Adicionado: Status do último scan
+        scan_id?: string;
+        uuid?: string;
+        status?: string;
     };
     owner_id?: string;
-    owner?: { name: string }; // Para scans VM, o owner pode ter nome
-    id?: string; // Para scans VM, pode ser o id do scan
-    last_modification_date?: string; // Para scans VM, usado como ID numérico temporário
+    owner?: { name: string };
+    id?: string;
+    last_modification_date?: string;
 }
 
 export interface Folder {
@@ -53,11 +48,9 @@ export interface ReportGenerated {
     nome: string;
 }
 
-// --- Funções de API para Listas ---
 export const listsApi = {
-    // ESTA É A LINHA CRÍTICA: DEVE TER '/lists/' (em inglês)
     getAllLists: async (): Promise<Lista[]> => {
-        const response = await api.get('/lists/getTodasAsListas/'); 
+        const response = await api.get('/lists/getTodasAsListas/');
         return response.data;
     },
 
@@ -82,7 +75,8 @@ export const listsApi = {
     },
 
     addWebAppScanToList: async (nomeLista: string, scans: { items: ScanData[] }): Promise<{ message: string }> => {
-        const response = await api.post('/lists/adicionarWAPPScanALista/', { nomeLista, scans });
+        // Aumentando o timeout para 5 minutos (300000 ms) para esta operação
+        const response = await api.post('/lists/adicionarWAPPScanALista/', { nomeLista, scans }, { timeout: 300000 });
         return response.data;
     },
 
@@ -114,7 +108,6 @@ export const listsApi = {
     },
 };
 
-// --- Funções de API para Scans (Tenable) ---
 export const scansApi = {
     getWebAppScansFromFolder: async (nomeUsuario: string, nomePasta: string): Promise<ScanData[]> => {
         const response = await api.post('/scans/webapp/scansfromfolderofuser/', { nomeUsuario, nomePasta });
@@ -144,7 +137,6 @@ export const scansApi = {
     },
 };
 
-// --- Funções de API para Relatórios ---
 export const reportsApi = {
     getGeneratedReports: async (): Promise<ReportGenerated[]> => {
         const response = await api.get('/reports/getRelatoriosGerados/');
@@ -177,7 +169,6 @@ export const reportsApi = {
     },
 };
 
-// --- Funções de API para Gerenciamento de Vulnerabilidades ---
 export const vulnerabilitiesApi = {
     getAllVulnerabilities: async (type: 'sites' | 'servers'): Promise<any[]> => {
         const response = await api.get(`/vulnerabilities/getVulnerabilidades/?type=${type}`);
