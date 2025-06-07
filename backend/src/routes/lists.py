@@ -575,7 +575,7 @@ def gerarRelatorioDeLista():
         pasta_final_latex = str(pasta_destino_relatorio_temp / "RelatorioPronto")
         compilar_latex(os.path.join(pasta_final_latex, "main.tex"), pasta_final_latex)
 
-        pasta_front_downloads = Path("../front-end/downloads") / str(novo_relatorio_id)
+        pasta_front_downloads = Path("../frontend/downloads") / str(novo_relatorio_id)
         pasta_front_downloads.mkdir(parents=True, exist_ok=True)
         
         shutil.copy(

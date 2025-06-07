@@ -250,7 +250,7 @@ function PesquisarScanVM() {
                             <div className="text-center mt-6">
                                 <button
                                     onClick={handleDownloadScan}
-                                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                    className="bg-[#007BB4] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                                     disabled={loading || !listaSelecionada}
                                 >
                                     {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Baixar e Associar Scan'}

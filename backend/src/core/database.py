@@ -3,8 +3,10 @@ from typing import Any, Dict, List
 from bson.objectid import ObjectId
 
 class Database:
-    def __init__(self, db_name: str = "mydatabase"): # Alterado o nome padrão do DB para 'mydatabase' para consistência
-        self.client = MongoClient("mongodb://localhost:27017/")
+    def __init__(self, db_name: str = "mydatabase"):
+        # ATENÇÃO: Alterado de "mongodb://localhost:27017/" para "mongodb://mongodb:27017/"
+        # 'mongodb' é o nome do serviço MongoDB no docker-compose.yml
+        self.client = MongoClient("mongodb://mongodb:27017/") 
         self.db = self.client[db_name]
 
     def insert_one(self, collection_name: str, data: Dict[str, Any]):

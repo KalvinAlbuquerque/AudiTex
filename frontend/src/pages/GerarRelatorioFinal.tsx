@@ -1,148 +1,130 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Manter useNavigate
-import axios from 'axios';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import { useParams } from 'react-router-dom';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const API_URL = import.meta.env.VITE_REACT_APP_API_URL; // Obtém a URL da API das variáveis de ambiente
+import { reportsApi } from '../api/backendApi'; // Importar reportsApi
 
 function GerarRelatorioFinal() {
     const { relatorioId } = useParams<{ relatorioId: string }>();
-    const navigate = useNavigate(); // Manter, pois é usado para navegação
-
     const [loading, setLoading] = useState(false);
-    const [missingVulnerabilitiesSites, setMissingVulnerabilitiesSites] = useState<string[]>([]);
-    const [missingVulnerabilitiesServers, setMissingVulnerabilitiesServers] = useState<string[]>([]);
+    const [missingVulnerabilities, setMissingVulnerabilities] = useState<{ sites: string[]; servers: string[] } | null>(null);
 
     useEffect(() => {
         if (relatorioId) {
-            fetchMissingVulnerabilities('sites');
-            fetchMissingVulnerabilities('servers');
+            fetchMissingVulnerabilities();
         }
     }, [relatorioId]);
 
-    const fetchMissingVulnerabilities = async (type: 'sites' | 'servers') => {
+    const fetchMissingVulnerabilities = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/reports/getRelatorioMissingVulnerabilities?relatorioId=${relatorioId}&type=${type}`);
-            if (type === 'sites') {
-                setMissingVulnerabilitiesSites(response.data.content);
+            // Chamadas para obter vulnerabilidades ausentes (sites)
+            const missingSites = await reportsApi.getMissingVulnerabilities(relatorioId!, 'sites');
+            // Chamadas para obter vulnerabilidades ausentes (servers)
+            const missingServers = await reportsApi.getMissingVulnerabilities(relatorioId!, 'servers');
+            
+            setMissingVulnerabilities({ sites: missingSites, servers: missingServers });
+
+            if (missingSites.length > 0 || missingServers.length > 0) {
+                toast.warn('Foram encontradas vulnerabilidades não descritas. Verifique a seção de vulnerabilidades ausentes.');
             } else {
-                setMissingVulnerabilitiesServers(response.data.content);
+                toast.success('Relatório gerado e todas as vulnerabilidades foram categorizadas.');
             }
-        } catch (error: any) {
-            console.error(`Erro ao buscar vulnerabilidades ausentes para ${type}:`, error);
-            if (error.response && error.response.status === 404) {
-                // Mensagem específica se o arquivo não for encontrado (pode ser normal se não houver ausentes)
-                if (type === 'sites') setMissingVulnerabilitiesSites([]);
-                else setMissingVulnerabilitiesServers([]);
-                toast.info(`Nenhuma vulnerabilidade ausente encontrada para ${type}.`);
-            } else {
-                toast.error(`Erro ao buscar vulnerabilidades ausentes para ${type}.`);
-            }
+        } catch (error) {
+            console.error('Erro ao buscar vulnerabilidades ausentes:', error);
+            toast.error('Erro ao buscar vulnerabilidades ausentes.');
         } finally {
             setLoading(false);
         }
     };
 
-    const downloadPDF = async () => { // Manter, pois a função será chamada por um botão
+    // NOVO: Função para lidar com o download do PDF
+    const handleDownloadPdf = async () => {
+        if (!relatorioId) {
+            toast.error('ID do relatório não disponível para download.');
+            return;
+        }
         setLoading(true);
         try {
-            const response = await axios.post(`${API_URL}/reports/baixarRelatorioPdf`, {
-                idRelatorio: relatorioId,
-            }, {
-                responseType: 'blob', // Importante para baixar arquivos
-            });
-
-            // Cria um link temporário para download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Relatorio_${relatorioId}.pdf`); // Nome do arquivo
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url); // Libera o URL do objeto
-
-            toast.success('Download do PDF iniciado!');
-        } catch (error: any) {
-            console.error('Erro ao baixar o PDF:', error);
-            if (error.response && error.response.status === 404) {
-                toast.error('PDF do relatório não encontrado.');
-            } else {
-                toast.error('Erro ao baixar o PDF. Verifique os logs.');
-            }
+            const pdfBlob = await reportsApi.downloadReportPdf(relatorioId); // Chama a API para baixar o PDF
+            const url = window.URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Relatorio_Auditoria_${relatorioId}.pdf`; // Nome do arquivo
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Download do relatório PDF iniciado!');
+        } catch (error) {
+            console.error('Erro ao baixar PDF:', error);
+            toast.error('Erro ao baixar o relatório PDF.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-100">
-            <Header />
-            <ToastContainer />
-            <main className="flex-grow p-6 flex justify-center items-center">
-                <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-4xl">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-                        Relatório Gerado
-                    </h2>
+        <div className="min-h-screen bg-gray-100 p-6">
+            <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Status do Relatório</h1>
 
-                    <p className="text-gray-700 mb-4 text-center">
-                        Seu relatório foi gerado com sucesso! Você pode baixá-lo ou verificar as vulnerabilidades que não foram categorizadas.
+            {loading ? (
+                <div className="flex justify-center items-center h-64">
+                    <ClipLoader size={50} color={"#1a73e8"} />
+                </div>
+            ) : (
+                <div className="bg-white shadow-md rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+                    <p className="text-lg text-gray-700 text-center mb-4">
+                        Processo de geração do relatório concluído para o ID: <span className="font-semibold">{relatorioId}</span>
                     </p>
 
-                    <div className="text-center mb-8">
+                    {/* Botão de Download do PDF */}
+                    <div className="text-center mb-6">
                         <button
-                            onClick={downloadPDF}
-                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-4"
+                            onClick={handleDownloadPdf}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition"
                             disabled={loading}
                         >
-                            {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Baixar Relatório PDF'}
-                        </button>
-                        <button
-                            onClick={() => navigate('/relatorios-gerados')}
-                            className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        >
-                            Voltar para Relatórios Gerados
+                            Baixar Relatório PDF
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                                Vulnerabilidades Web App Não Categorizadas
-                            </h3>
-                            {missingVulnerabilitiesSites.length > 0 ? (
-                                <ul className="list-disc list-inside bg-gray-50 p-4 rounded-md h-64 overflow-y-auto">
-                                    {missingVulnerabilitiesSites.map((vuln, index) => (
-                                        <li key={index} className="text-gray-700">{vuln}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-gray-600">Todas as vulnerabilidades de Web Apps foram categorizadas.</p>
+                    {missingVulnerabilities && (
+                        <>
+                            {missingVulnerabilities.sites.length > 0 && (
+                                <div className="mb-4">
+                                    <h2 className="text-xl font-semibold text-red-600 mb-2">Vulnerabilidades WebApp Ausentes:</h2>
+                                    <ul className="list-disc list-inside text-gray-700">
+                                        {missingVulnerabilities.sites.map((vuln, index) => (
+                                            <li key={`site-missing-${index}`}>{vuln}</li>
+                                        ))}
+                                    </ul>
+                                </div>
                             )}
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                                Vulnerabilidades Servidores Não Categorizadas
-                            </h3>
-                            {missingVulnerabilitiesServers.length > 0 ? (
-                                <ul className="list-disc list-inside bg-gray-50 p-4 rounded-md h-64 overflow-y-auto">
-                                    {missingVulnerabilitiesServers.map((vuln, index) => (
-                                        <li key={index} className="text-gray-700">{vuln}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-gray-600">Todas as vulnerabilidades de Servidores foram categorizadas.</p>
+
+                            {missingVulnerabilities.servers.length > 0 && (
+                                <div className="mb-4">
+                                    <h2 className="text-xl font-semibold text-red-600 mb-2">Vulnerabilidades Servidor Ausentes:</h2>
+                                    <ul className="list-disc list-inside text-gray-700">
+                                        {missingVulnerabilities.servers.map((vuln, index) => (
+                                            <li key={`server-missing-${index}`}>{vuln}</li>
+                                        ))}
+                                    </ul>
+                                </div>
                             )}
-                        </div>
-                    </div>
+
+                            {missingVulnerabilities.sites.length === 0 && missingVulnerabilities.servers.length === 0 && (
+                                <p className="text-green-600 text-center text-lg">
+                                    Todas as vulnerabilidades foram categorizadas e descritas!
+                                </p>
+                            )}
+                        </>
+                    )}
                 </div>
-            </main>
-            <Footer />
+            )}
+            <ToastContainer />
         </div>
     );
 }

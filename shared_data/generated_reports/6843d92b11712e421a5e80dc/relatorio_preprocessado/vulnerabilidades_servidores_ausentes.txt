@@ -1,6 +1,0 @@
-ICMP Timestamp Request Remote Date Disclosure
-SSL Certificate with Wrong Hostname
-SSL Certificate Cannot Be Trusted
-SSL Self-Signed Certificate
-SMB Signing not required
-Terminal Services Doesn't Use Network Level Authentication (NLA) Only

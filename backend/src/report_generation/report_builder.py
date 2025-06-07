@@ -7,10 +7,6 @@ from pathlib import Path
 from datetime import datetime, date
 from babel.dates import format_date
 
-# Não importa mais de json_parser ou csv_parser, pois as funções foram movidas para cá.
-# from ..data_processing.json_parser import carregar_vulnerabilidades_do_relatorio # REMOVIDO
-# from ..data_processing.csv_parser import carregar_vulnerabilidades_do_relatorio_csv # REMOVIDO
-
 # Importa as funções de utilidade e JSON do core
 from ..core.json_utils import carregar_json_utf, _load_data_
 from ..core.config import Config
@@ -136,11 +132,11 @@ def gerar_relatorio_txt(output_file: str, risk_factor_counts: dict, common_vulne
             output.write("\n".join(targets))
             output.write("\n\nVulnerabilidades em comum, entre os sites/URI:\n\n")
             sorted_vulnerabilities = sorted(common_vulnerabilities.items(), key=lambda x: len(set(x[1])), reverse=True)
-            for (name, plugin_id), uris in sorted_vulnerabilities:
+            for (name, plugin_id), uris in sorted_vulnerabilities: # 'plugin_id' ainda está aqui para iteração, mas não será impresso
                 if len(uris) > 1:
                     unique_uris = sorted(list(set(uris)))
                     output.write(f"\nVulnerabilidade: {name}\n")
-                    output.write(f"Plugin ID: {plugin_id}\n")
+                    # REMOVIDO: output.write(f"Plugin ID: {plugin_id}\n")
                     output.write(f"Total de URI Afetadas: {len(unique_uris)}\n")
                     output.write(f"URI Afetadas:\n")
                     for url in unique_uris:
@@ -429,6 +425,15 @@ def copiar_relatorio_exemplo(caminho_relatorio_exemplo: str, caminho_saida: str)
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
         print(f"Estrutura base do relatório copiada de '{src}' para '{dst}'")
+
+        # --- NOVO: Verificação explícita do arquivo preambulo.tex após a cópia ---
+        copied_preambulo_path = dst / "preambulo.tex"
+        if copied_preambulo_path.exists():
+            print(f"DEBUG: 'preambulo.tex' foi copiado com sucesso para: {copied_preambulo_path}")
+        else:
+            print(f"ERRO: 'preambulo.tex' NÃO foi encontrado em: {copied_preambulo_path} APÓS a cópia.")
+        # --- FIM NOVO ---
+
     except Exception as e:
         print(f"Erro ao copiar a estrutura de exemplo do relatório: {e}")
 
@@ -461,7 +466,8 @@ def terminar_relatorio_preprocessado(
     total_vulnerabilidades_alta_servidores: str,
     total_vulnerabilidades_media_servidores: str,
     total_vulnerabilidades_baixa_servidores: str,
-    total_sites: str
+    total_sites: str,
+    criado_por_vm_scan: str # <--- NOVO: Adicione este parâmetro
 ):
     """
     Finaliza o relatório LaTeX, inserindo os conteúdos preprocessados e placeholders.
@@ -518,6 +524,7 @@ def terminar_relatorio_preprocessado(
         'TOTAL VULNERABILIDADES SERVIDORES MEDIA': total_vulnerabilidades_media_servidores,
         'TOTAL VULNERABILIDADES SERVIDORES BAIXA': total_vulnerabilidades_baixa_servidores,
         'TOTAL_SITES': total_sites,
+        'CRIADO_POR_VM_SCAN': criado_por_vm_scan, # <--- NOVO: Adicione este placeholder
     }
 
     latex_editado = substituir_placeholders(

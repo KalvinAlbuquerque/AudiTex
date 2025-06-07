@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 from bson.objectid import ObjectId
 import pandas as pd
+import traceback # Importado para printar tracebacks completos
 
 # Importa a classe Config
 from ..core.config import Config
@@ -19,21 +20,15 @@ from ..report_generation.latex_compiler import compilar_latex
 from ..report_generation.plot_generator import gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site
 
 # Inicializa a configuração e o banco de dados
-config = Config("config.json")
+config = Config("config.json") # Configuração será carregada de config.json ou configDocker.json pelo main.py
 db = Database() # Instância do banco de dados
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
-#CORS(reports_bp, origins=["http://localhost:3000", "http://127.0.0.1:3000"]) # Adicione CORS para este blueprint AQUI
 
 @reports_bp.route('/getRelatoriosGerados/', methods=['GET'])
-#@cross_origin(origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 def getRelatoriosGerados():
     try:
-        # A instância db já é globalmente acessível, mas recriar a conexão para cada requisição
-        # é uma prática comum em Flask para evitar problemas de threading se a instância não for bem gerida.
-        # No entanto, se for um singleton, a instância `db` global já serve.
-        # Por simplicidade e consistência com o que já existe:
-        db_instance = Database() # Cria uma nova instância da classe Database para a requisição
+        db_instance = Database()
         relatorios = db_instance.find("relatorios")
         relatorios_list = []
         for relatorio in relatorios:
@@ -41,17 +36,17 @@ def getRelatoriosGerados():
                 "nome": relatorio["nome"],
                 "id": str(relatorio["_id"])
             })
-        db_instance.close() # Fecha a conexão após o uso
+        db_instance.close()
         return jsonify(relatorios_list), 200
     except Exception as e:
         print(f"Erro ao obter relatórios gerados: {e}")
-        return jsonify({"error": str(e)}), 500 # Alterado de 520 para 500 (Internal Server Error)
+        traceback.print_exc() # Para depuração
+        return jsonify({"error": str(e)}), 500
 
 @reports_bp.route('/deleteRelatorio/<string:relatorio_id>', methods=['DELETE'])
-#@cross_origin(origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 def deleteRelatorio(relatorio_id):
     try:
-        db_instance = Database() # Cria uma nova instância da classe Database para a requisição
+        db_instance = Database()
         
         delete_result = db_instance.delete_one("relatorios", {"_id": db_instance.get_object_id(relatorio_id)})
         
@@ -59,7 +54,6 @@ def deleteRelatorio(relatorio_id):
             db_instance.close()
             return jsonify({"message": "Relatório não encontrado no banco de dados."}), 404
 
-        # Caminho para a pasta do relatório gerado
         report_folder_path = Path(config.caminho_shared_relatorios) / relatorio_id
         
         if report_folder_path.exists() and report_folder_path.is_dir():
@@ -73,21 +67,18 @@ def deleteRelatorio(relatorio_id):
 
     except Exception as e:
         print(f"Erro ao excluir relatório {relatorio_id}: {str(e)}")
+        traceback.print_exc() # Para depuração
         return jsonify({"error": f"Erro interno ao excluir relatório: {str(e)}"}), 500
 
 @reports_bp.route('/deleteAllRelatorios/', methods=['DELETE'])
-#@cross_origin(origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 def deleteAllRelatorios():
     try:
-        db_instance = Database() # Cria uma nova instância da classe Database para a requisição
+        db_instance = Database()
         
-        # 1. Recuperar todos os relatórios para obter seus IDs (necessário para excluir as pastas)
         all_relatorios = db_instance.find("relatorios")
         
-        # 2. Excluir todos os documentos do banco de dados
         delete_db_result = db_instance.delete_many("relatorios", {})
         
-        # 3. Excluir todas as pastas de relatórios do sistema de arquivos
         deleted_folders_count = 0
         for relatorio in all_relatorios:
             relatorio_id = str(relatorio["_id"])
@@ -110,10 +101,10 @@ def deleteAllRelatorios():
 
     except Exception as e:
         print(f"Erro ao excluir todos os relatórios: {str(e)}")
+        traceback.print_exc() # Para depuração
         return jsonify({"error": f"Erro interno ao excluir todos os relatórios: {str(e)}"}), 500
 
 @reports_bp.route('/gerarRelatorioDeLista/', methods=['POST'])
-#@cross_origin(origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 def gerarRelatorioDeLista():
     try:
         data = request.get_json()
@@ -130,9 +121,8 @@ def gerarRelatorioDeLista():
         mes = data.get("mes")
         google_drive_link = data.get("linkGoogleDrive")
 
-        db_instance = Database() # Cria nova instância de DB para esta requisição
+        db_instance = Database()
 
-        # Validar ObjectId
         try:
             objeto_id = ObjectId(id_lista)
         except Exception:
@@ -145,65 +135,42 @@ def gerarRelatorioDeLista():
             db_instance.close()
             return jsonify({"error": "Lista não encontrada."}), 404
 
-        # Cria um novo registro para o relatório gerado
+        criado_por_vm_scan = lista_doc.get("scanStoryIdCriadoPor", "Não informado")
+
         novo_relatorio_id = db_instance.insert_one(
             "relatorios",
             {"nome": nome_secretaria, "id_lista": id_lista, "destino_relatorio_preprocessado" : None}
         ).inserted_id
 
-        # =====================================================================
-        # Definir caminhos para os arquivos temporários e finais do relatório
-        # =====================================================================
-        # Esta é a pasta raiz para os arquivos gerados para ESTE relatório específico
         pasta_destino_relatorio_temp = Path(config.caminho_shared_relatorios) / str(novo_relatorio_id) / "relatorio_preprocessado"
         pasta_destino_relatorio_temp.mkdir(parents=True, exist_ok=True)
         
-        # A pasta de scans baixados para esta lista
         pasta_scans_da_lista = lista_doc.get("pastas_scans_webapp")
 
-        # Atualiza o documento do relatório com o caminho de destino
         db_instance.update_one(
             "relatorios",
             {"_id": novo_relatorio_id},
             {"destino_relatorio_preprocessado": str(pasta_destino_relatorio_temp)}
         )
 
-        # =====================================================================
-        # Processamento de Scans WebApp (JSON)
-        # =====================================================================
-        # Se a pasta de scans webapp existir e não estiver vazia
         if pasta_scans_da_lista and os.path.exists(pasta_scans_da_lista) and len(os.listdir(pasta_scans_da_lista)) > 0:
             processar_relatorio_json(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
-            # Extrair quantidades para o gráfico CSV
             output_csv_path = str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv")
             extrair_quantidades_vulnerabilidades_por_site(output_csv_path, pasta_scans_da_lista)
         else:
             print(f"Aviso: Não há scans WebApp na pasta {pasta_scans_da_lista} ou a pasta está vazia. Pulando processamento WebApp.")
-            # Criar CSV vazio ou com cabeçalho para evitar erros no gráfico
             df_empty = pd.DataFrame(columns=['Site', 'Critical', 'High', 'Medium', 'Low', 'Total'])
             df_empty.to_csv(str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"), index=False)
-            
-            # Criar arquivos TXT e LaTeX de WebApp vazios para evitar erros de arquivo não encontrado
             Path(pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt").touch()
             Path(pasta_destino_relatorio_temp / "(LATEX)Sites_agrupados_por_vulnerabilidades.txt").touch()
 
-        # =====================================================================
-        # Processamento de Scans Servidores (CSV)
-        # =====================================================================
-        # Verifica se há um VM scan associado a esta lista
         if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan"):
-            # O `pasta_scans_da_lista` contém o CSV do VM scan também
             processar_relatorio_csv(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
         else:
             print("Aviso: Não há scans de Servidores associados a esta lista. Pulando processamento de Servidores.")
-            # Criar arquivos TXT e LaTeX de Servidores vazios
             Path(pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt").touch()
             Path(pasta_destino_relatorio_temp / "(LATEX)Servidores_agrupados_por_vulnerabilidades.txt").touch()
 
-        # =====================================================================
-        # Leitura dos totais para o relatório final
-        # =====================================================================
-        # WebApp totals (do TXT gerado pelo processar_relatorio_json)
         webapp_report_txt_path = pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt"
         webapp_risk_counts = {'Critical': '0', 'High': '0', 'Medium': '0', 'Low': '0'}
         total_sites = '0'
@@ -227,7 +194,6 @@ def gerarRelatorioDeLista():
         else:
             print(f"Aviso: Arquivo de resumo WebApp '{webapp_report_txt_path}' não encontrado. Totais WebApp serão 0.")
 
-        # Servers totals (do TXT gerado pelo processar_relatorio_csv)
         servers_report_txt_path = pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt"
         servers_risk_counts = {'critical': '0', 'high': '0', 'medium': '0', 'low': '0'}
         total_vulnerabilidade_vm = '0'
@@ -248,10 +214,6 @@ def gerarRelatorioDeLista():
         else:
             print(f"Aviso: Arquivo de resumo Servidores '{servers_report_txt_path}' não encontrado. Totais Servidores serão 0.")
 
-
-        # =====================================================================
-        # Finalizar Relatório LaTeX (Chama o report_builder.py)
-        # =====================================================================
         caminho_final_main_tex = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "main.tex")
 
         terminar_relatorio_preprocessado(
@@ -274,42 +236,32 @@ def gerarRelatorioDeLista():
             servers_risk_counts['high'],
             servers_risk_counts['medium'],
             servers_risk_counts['low'],
-            total_sites
+            total_sites,
+            criado_por_vm_scan # NOVO: Passar o nome do criador do VM scan
         )
 
-        # =====================================================================
-        # Gerar Gráficos (Chama o plot_generator.py)
-        # =====================================================================
-        # Gráfico de vulnerabilidades por site (Web App)
         graph_output_webapp = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "assets" / "images-was" / "Vulnerabilidades_x_site.png")
         gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
             str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"),
             graph_output_webapp,
             "descendente"
         )
-        # Note: O gráfico total de vulnerabilidades (donut) está no report_builder.py,
-        # e é gerado de forma diferente lá. Verifique se ele é gerado corretamente.
-        # O gráfico 'Total_Vulnerabilidades.png' para WebApp e VM, gerado por gerar_grafico() no report_builder.py,
-        # é chamado dentro do terminar_relatorio_preprocessado, que já é chamado aqui.
-        # As imagens devem ser geradas lá.
-
-        # =====================================================================
-        # Compilação LaTeX (Chama o latex_compiler.py)
-        # =====================================================================
+        
         pasta_final_latex = str(pasta_destino_relatorio_temp / "RelatorioPronto")
         compilar_latex(os.path.join(pasta_final_latex, "main.tex"), pasta_final_latex)
 
-        # =====================================================================
-        # Copiar PDF final para a pasta de downloads do frontend
-        # =====================================================================
-        pasta_front_downloads = Path("../front-end/downloads") / str(novo_relatorio_id)
-        pasta_front_downloads.mkdir(parents=True, exist_ok=True)
-        
-        shutil.copy(
-            Path(pasta_final_latex) / "main.pdf",
-            pasta_front_downloads / "main.pdf"
-        )
-        print(f"PDF final copiado para {pasta_front_downloads}/main.pdf")
+        # --- REMOVIDO: A seção de cópia para a pasta de downloads do frontend ---
+        # A pasta de downloads do frontend não é acessível diretamente pelo backend.
+        # O download será feito via requisição do frontend.
+        # As linhas abaixo foram removidas:
+        # pasta_front_downloads = Path("../front-end/downloads") / str(novo_relatorio_id)
+        # pasta_front_downloads.mkdir(parents=True, exist_ok=True)
+        # shutil.copy(
+        #     Path(pasta_final_latex) / "main.pdf",
+        #     pasta_front_downloads / "main.pdf"
+        # )
+        # print(f"PDF final copiado para {pasta_front_downloads}/main.pdf")
+        # --- FIM REMOVIDO ---
 
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
         db_instance.close()
@@ -318,13 +270,12 @@ def gerarRelatorioDeLista():
 
     except Exception as e:
         print(f"Erro ao gerar relatório de lista: {str(e)}")
-        # Garante que a conexão com o DB seja fechada em caso de erro
+        traceback.print_exc() # Para depuração
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
         return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500
 
 @reports_bp.route('/getRelatorioMissingVulnerabilities/', methods=['GET'])
-#@cross_origin(origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 def get_report_missing_vulnerabilities():
     try:
         relatorio_id = request.args.get('relatorioId')
@@ -333,7 +284,6 @@ def get_report_missing_vulnerabilities():
         if not relatorio_id or not report_type:
             return jsonify({"error": "Parâmetros 'relatorioId' e 'type' são obrigatórios."}), 400
 
-        # O arquivo TXT está na pasta relatorio_preprocessado dentro da pasta do relatório
         caminho_base_preprocessado = Path(config.caminho_shared_relatorios) / str(relatorio_id) / "relatorio_preprocessado"
         
         file_name = ""
@@ -355,10 +305,10 @@ def get_report_missing_vulnerabilities():
 
     except Exception as e:
         print(f"Erro interno ao buscar vulnerabilidades ausentes: {str(e)}")
+        traceback.print_exc() # Para depuração
         return jsonify({"error": f"Erro interno ao buscar vulnerabilidades ausentes: {str(e)}"}), 500
 
 @reports_bp.route('/baixarRelatorioPdf/', methods=['POST'])
-#@cross_origin(origins=["http://localhost:5173", "127.0.0.1"])
 def baixar_relatorio_pdf():
     try:
         data = request.get_json()
@@ -368,22 +318,20 @@ def baixar_relatorio_pdf():
         if not id_relatorio:
             return jsonify({"error": "ID do relatório não fornecido."}), 400
 
-        # Caminho do PDF dentro da nova estrutura
-        # /app/shared_data/generated_reports/<id_relatorio>/relatorio_preprocessado/RelatorioPronto/main.pdf
         caminho_pdf_destino = Path(config.caminho_shared_relatorios) / id_relatorio / "relatorio_preprocessado" / "RelatorioPronto" / "main.pdf"
         
         if not caminho_pdf_destino.exists():
             print(f"PDF não encontrado: {caminho_pdf_destino}")
             return jsonify({"error": "PDF do relatório não encontrado."}), 404
 
-        # Tentar enviar o arquivo
         return send_file(
             str(caminho_pdf_destino),
+            mimetype='application/pdf',
             as_attachment=True,
-            download_name=f"Relatorio_{id_relatorio}.pdf", # Pode usar o nome da secretaria aqui se quiser
-            mimetype="application/pdf"
+            download_name=f"Relatorio_{id_relatorio}.pdf"
         )
 
     except Exception as e:
         print(f"Erro interno ao baixar relatório PDF: {str(e)}")
+        traceback.print_exc() # Para depuração
         return jsonify({"error": f"Erro interno: {str(e)}"}), 500

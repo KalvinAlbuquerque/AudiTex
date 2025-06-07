@@ -1,5 +1,7 @@
-# Usa uma imagem base Node.js oficial
-FROM node:20-alpine AS build
+# frontend/Dockerfile.frontend
+
+# Usa uma imagem base Node.js oficial (para desenvolvimento)
+FROM node:20-alpine
 
 # Define o diretório de trabalho dentro do contêiner
 WORKDIR /app
@@ -12,24 +14,13 @@ COPY package*.json ./
 # 'npm ci' é mais determinístico do que 'npm install' em ambientes de CI/CD
 RUN npm ci
 
-# Copia o restante do código da aplicação
-COPY . .
+# O restante do código da aplicação (pasta 'src')
+# NÃO precisa ser copiado aqui com 'COPY . .', pois ele será montado
+# via volume pelo docker-compose.yml, permitindo hot-reloading.
 
-# Constrói a aplicação React para produção
-RUN npm run build
+# Expõe a porta que o servidor de desenvolvimento do Vite vai rodar
+EXPOSE 3000
 
-# Imagem de produção leve para servir os arquivos estáticos
-FROM nginx:alpine
-
-# Copia os arquivos de build do estágio 'build' para o diretório de serviço do Nginx
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copia o arquivo de configuração do Nginx (opcional, se você tiver um customizado)
-# Se você tiver um nginx.conf personalizado, coloque-o na pasta frontend/nginx.conf
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expõe a porta padrão do Nginx
-EXPOSE 80
-
-# Comando padrão do Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Comando para iniciar o servidor de desenvolvimento do Vite
+# O '--host 0.0.0.0' permite que o servidor seja acessível de fora do contêiner
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
