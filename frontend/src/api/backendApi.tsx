@@ -22,20 +22,30 @@ export interface Lista {
 }
 
 export interface ScanData {
-    config_id?: string;
+    config_id?: string; // Propriedade de WAS Scan
     name: string;
-    target?: string;
+    target?: string; // Propriedade de WAS Scan
     description?: string;
-    created_at?: string;
-    last_scan?: {
+    created_at?: string; // Propriedade de WAS Scan
+    last_scan?: { // Propriedade de WAS Scan (última varredura)
         scan_id?: string;
         uuid?: string;
         status?: string;
     };
-    owner_id?: string;
+    owner_id?: string; // Propriedade de WAS Scan
     owner?: { name: string };
-    id?: string;
-    last_modification_date?: string;
+    id?: string; // Propriedade de VM Scan (ID numérico principal)
+    last_modification_date?: string; // Propriedade comum (pode vir de WAS ou VM)
+    
+    // --- INÍCIO DA CORREÇÃO APLICADA AQUI: Adicionando a propriedade 'history' ---
+    history?: Array<{ // Propriedade específica de VM Scan (histórico de execuções)
+        uuid: string; // O UUID do histórico de scan, usado para download
+        scan_id?: string; // ID do scan dentro do histórico (pode ser o mesmo que o 'id' principal)
+        status?: string; // Status da execução do histórico
+        last_modification_date?: string; // Data de modificação do histórico (para encontrar o mais recente)
+        // Adicione outras propriedades do objeto 'history' se forem relevantes
+    }>;
+    // --- FIM DA CORREÇÃO APLICADA AQUI ---
 }
 
 export interface Folder {

@@ -38,9 +38,10 @@ class TenableApi():
             "X-ApiKeys": f"accessKey={self.access_key}; secretKey={self.secret_key}",
         }
 
-        # É importante criar uma nova instância de Client por instância de TenableApi (ou gerenciar bem).
-        # Aqui, mantemos como estava, vinculando ao self.
-        self.client = Client(base_url="https://cloud.tenable.com", verify=False, headers=self.headers)
+        # --- INÍCIO DA CORREÇÃO APLICADA AQUI ---
+        # Aumentando o timeout para 60 segundos (você pode ajustar se necessário)
+        self.client = Client(base_url="https://cloud.tenable.com", verify=False, headers=self.headers, timeout=60.0)
+        # --- FIM DA CORREÇÃO APLICADA AQUI ---
         self._initialized = True # Marca como inicializado
 
     def get_user_id_from_username(self, user_name: str) -> str | None:
@@ -186,10 +187,8 @@ class TenableApi():
         """
         url_export_request = f"/scans/{scan_id}/export?history_id={history_id}"
 
-        # Usar self.headers diretamente, como no código antigo, mas garantindo que o client correto é usado.
-        
         payload = {
-            "chapters": "", # Alterado de "vulnerabilities" para "" para replicar o comportamento do código antigo
+            "chapters": "vulnerabilities", # Mantido como "vulnerabilities"
             "format": "csv"
         }
 
@@ -198,7 +197,7 @@ class TenableApi():
         
         file_export_id = response_export_initiate.get("file")
         if not file_export_id:
-            print(f"Erro: Não foi possível obter o ID do arquivo para exportação do scan VM {scan_id}, history {history_id}.")
+            print(f"Erro: Não foi possível obter o ID do arquivo para exportação do scan VM {scan_id}, history {history_id}. Resposta: {response_export_initiate}") # Adicionado para depuração
             return
 
         # 2. Polling para verificar o status da exportação
@@ -208,9 +207,9 @@ class TenableApi():
             response_status = self.client.get(status_url).json()
             status = response_status.get("status")
             if status == "error":
-                print(f"Exportação do scan VM {scan_id}, history {history_id} falhou.")
+                print(f"Exportação do scan VM {scan_id}, history {history_id} falhou. Status da resposta: {response_status}") # Adicionado para depuração
                 return
-            time.sleep(1) # Alterado de 5 segundos para 1 segundo para replicar o comportamento do código antigo
+            time.sleep(1) # Mantido em 1 segundo
 
         # 3. Baixa o arquivo CSV
         download_url = f"/scans/{scan_id}/export/{file_export_id}/download"
