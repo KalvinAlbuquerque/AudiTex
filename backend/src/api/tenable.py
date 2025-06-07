@@ -1,6 +1,12 @@
 import os
 import time
 from httpx import Client
+from dotenv import load_dotenv
+
+# Carrega variáveis de ambiente de um arquivo .env no diretório do backend (credentials.env)
+# Assumindo que credentials.env está no mesmo nível que tenable.py
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'credentials.env'))
+
 
 class TenableApi():
 
@@ -146,39 +152,22 @@ class TenableApi():
                 continue
 
             url_report_request = f"/was/v2/scans/{scan_id}/report"
-            url_report_download = f"/was/v2/scans/{scan_id}/report"
-
-            # 1. Inicia a geração do relatório
+            # Inicia a geração do relatório
             response_initiate = self.client.put(url_report_request)
-            if response_initiate.status_code != 200:
-                print(f"Erro ao iniciar geração do relatório para scan ID {scan_id}: {response_initiate.text}")
-                continue
-
-            # 2. Polling para verificar o status
-            status = "pending"
-            while status not in ["ready", "error"]:
-                time.sleep(5) # Espera 5 segundos antes de verificar novamente
-                response_status = self.client.get(url_report_request)
-                if response_status.status_code == 200:
-                    status = response_status.json().get("status", "pending")
-                else:
-                    print(f"Erro ao verificar status do relatório para scan ID {scan_id}: {response_status.text}")
-                    status = "error" # Força saída do loop
             
-            if status == "error":
-                print(f"Geração de relatório falhou para scan ID {scan_id}.")
-                continue
+            if response_initiate.status_code == 200:
+                # Se a iniciação foi bem-sucedida, tenta baixar imediatamente (comportamento da versão antiga)
+                response_download = self.client.get(url_report_request)
 
-            # 3. Baixa o relatório
-            response_download = self.client.get(url_report_download)
-
-            if response_download.status_code == 200:
-                file_path = os.path.join(target_dir, f"{scan_id}.json")
-                with open(file_path, "w", encoding="utf-8") as file:
-                    file.write(response_download.text)
-                print(f"Relatório do scan {scan_id} baixado com sucesso para {file_path}")
+                if response_download.status_code == 200:
+                    file_path = os.path.join(target_dir, f"{scan_id}.json")
+                    with open(file_path, "w", encoding="utf-8") as file:
+                        file.write(response_download.text)
+                    print(f"Relatório do scan {scan_id} baixado com sucesso para {file_path}")
+                else:
+                    print(f"Erro ao baixar relatório para scan ID {scan_id}: {response_download.text}")
             else:
-                print(f"Erro ao baixar relatório para scan ID {scan_id}: {response_download.text}")
+                print(f"Erro ao iniciar geração do relatório para scan ID {scan_id}: {response_initiate.text}")
 
     def get_vmscans_from_name(self, name: str) -> dict | None:
         """
@@ -197,12 +186,10 @@ class TenableApi():
         """
         url_export_request = f"/scans/{scan_id}/export?history_id={history_id}"
 
-        headers_csv = self.headers.copy() # Copia os headers base
-        # O Tenable Cloud API usa 'accept: application/json' mesmo para export CSV,
-        # e o 'format: csv' vai no payload.
+        # Usar self.headers diretamente, como no código antigo, mas garantindo que o client correto é usado.
         
         payload = {
-            "chapters": "vulnerabilities", # Geralmente queremos o capítulo de vulnerabilidades
+            "chapters": "", # Alterado de "vulnerabilities" para "" para replicar o comportamento do código antigo
             "format": "csv"
         }
 
@@ -223,7 +210,7 @@ class TenableApi():
             if status == "error":
                 print(f"Exportação do scan VM {scan_id}, history {history_id} falhou.")
                 return
-            time.sleep(5) # Espera 5 segundos
+            time.sleep(1) # Alterado de 5 segundos para 1 segundo para replicar o comportamento do código antigo
 
         # 3. Baixa o arquivo CSV
         download_url = f"/scans/{scan_id}/export/{file_export_id}/download"
@@ -235,4 +222,4 @@ class TenableApi():
                 file.write(response_download.text)
             print(f"Scan VM {scan_id} baixado com sucesso para {file_path}")
         else:
-            print(f"Erro ao baixar scan VM {scan_id}: {response_download.text}")
+            print(f"Erro ao baixar relatório para scan ID {scan_id}: {response_download.text}")
