@@ -1,6 +1,7 @@
 \documentclass[a4paper,12pt]{article}
 
 \input{./preambulo} 
+\graphicspath{{./assets/}} % Add this line: Tells LaTeX to look for images in the 'assets' folder
 \title{Relatório de Auditoria de Segurança Cibernética}
 \author{}
 \date{}
@@ -39,13 +40,13 @@ A auditoria abrange a avaliação das vulnerabilidades em sistemas operacionais 
 \begin{itemize}
     \item \textbf{Tenable.io Vulnerability Management (Nessus, NNM):} Esta ferramenta avançada de gerenciamento de vulnerabilidades permite a realização de escaneamentos automatizados para identificar falhas de segurança em sistemas e redes.
 Utiliza diversas técnicas de varredura para detectar vulnerabilidades conhecidas e potenciais, ajudando a priorizar a correção com base em riscos específicos.
-\item \textbf{Trend Micro XDR Vision One:} Plataforma de Detecção e Resposta Estendida (XDR) que oferece visibilidade abrangente e correlação de ameaças em múltiplos vetores, incluindo endpoints, servidores e redes.
-A ferramenta melhora significativamente a capacidade de resposta a incidentes, correlacionando dados de diferentes fontes para identificar atividades maliciosas de forma mais eficaz.
-\item \textbf{Microsoft Windows:} Sistema operacional desenvolvido pela Microsoft, amplamente utilizado em ambientes corporativos e pessoais.
-Conhecido por sua interface amigável e vasta gama de aplicações empresariais, o Windows também incorpora diversas ferramentas de segurança e gerenciamento, como o Windows Defender e o Active Directory.
-\item \textbf{Linux:} Sistema operacional de código aberto amplamente utilizado em servidores e desktops.
-Reconhecido por sua robustez, segurança e flexibilidade, o Linux suporta uma vasta gama de distribuições que podem ser otimizadas para diferentes propósitos, desde servidores de alta performance até dispositivos embarcados.
-\end{itemize}
+ \item \textbf{Trend Micro XDR Vision One:} Plataforma de Detecção e Resposta Estendida (XDR) que oferece visibilidade abrangente e correlação de ameaças em múltiplos vetores, incluindo endpoints, servidores e redes.
+ A ferramenta melhora significativamente a capacidade de resposta a incidentes, correlacionando dados de diferentes fontes para identificar atividades maliciosas de forma mais eficaz.
+ \item \textbf{Microsoft Windows:} Sistema operacional desenvolvido pela Microsoft, amplamente utilizado em ambientes corporativos e pessoais.
+ Conhecido por sua interface amigável e vasta gama de aplicações empresariais, o Windows também incorpora diversas ferramentas de segurança e gerenciamento, como o Windows Defender e o Active Directory.
+ \item \textbf{Linux:} Sistema operacional de código aberto amplamente utilizado em servidores e desktops.
+ Reconhecido por sua robustez, segurança e flexibilidade, o Linux suporta uma vasta gama de distribuições que podem ser otimizadas para diferentes propósitos, desde servidores de alta performance até dispositivos embarcados.
+ \end{itemize}
 
 \subsection{Procedimentos}
 A auditoria foi conduzida por meio de uma série de escaneamentos automatizados, inspeções manuais e validações de conformidade com as normas e padrões de segurança aplicáveis.
@@ -84,7 +85,7 @@ Para um detalhamento mais específico sobre os quantitativos de vulnerabilidades
 \begin{figure}[h!]
     \centering
     % Garanta que o nome da imagem está sanitizado para minúsculas e hífens
-    \includegraphics[width=1.0\textwidth]{assets/images-was/vulnerabilidades-x-site.png}
+    \includegraphics[width=1.0\textwidth]{images-was/vulnerabilidades-x-site.png} % Modified image path
     \caption{Total de vulnerabilidades por site}
 \end{figure}
 \FloatBarrier
@@ -95,6 +96,7 @@ Essa estrutura facilita a análise, permitindo uma compreensão clara dos riscos
 %-------------- INÍCIO DA CATEGORIA Vulnerabilidades Relacionadas a Configurações de Segurança HTTP E TLS --------------
 [RELATORIO GERADO]
 %-------------- FIM DA CATEGORIA Outras Vulnerabilidades Críticas e Explorações --------------
+\newpage
 \section{Conclusão}
 
 A auditoria de segurança cibernética realizada pela Gerência Especial de Segurança da Informação da COGEL revelou um cenário alarmante de vulnerabilidades e riscos no ambiente de aplicações e servidores da Prefeitura de Salvador, administrado pela  [NOME SECRETARIA] - [SIGLA].
@@ -106,7 +108,6 @@ A adoção de políticas de segurança mais rigorosas e a conformidade com norma
 A urgência na aplicação de patches e na implementação de medidas corretivas é imperativa para mitigar esses riscos e proteger a integridade, confidencialidade e disponibilidade dos serviços e dados da prefeitura e de seus cidadãos.\\
 
 Por atingir seu objetivo, esta comissão encerra o presente instrumento ao tempo que declara o fim da Auditoria de Segurança Cibernética do Ambiente da [NOME SECRETARIA] - [SIGLA].
-\newpage
 
 \vspace*{\fill} % empurra o conteúdo para o final da página
 \begin{flushright}

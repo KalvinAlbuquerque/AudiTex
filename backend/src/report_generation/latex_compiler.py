@@ -11,9 +11,7 @@ def compilar_latex(caminho_main_tex: str, diretorio_saida: str):
         caminho_main_tex (str): O caminho completo para o arquivo main.tex.
         diretorio_saida (str): O diretório onde o PDF e outros arquivos de saída serão gerados.
     """
-    print("DENTRO DA FUNÇÃO COMPILAR LATEXXXXXXXXXXXXXX")
     try:
-        print("DENTRO DA FUNÇÃO COMPILAR LATEXXXXXXXXXXXXXX2")
 
         Path(diretorio_saida).mkdir(parents=True, exist_ok=True)
 
@@ -31,6 +29,8 @@ def compilar_latex(caminho_main_tex: str, diretorio_saida: str):
             main_tex_filename
         ]
 
+        # First pass to generate .aux and .toc files
+        print(f"Executando primeira passada do pdflatex em {diretorio_saida}...")
         result = subprocess.run(
             command,
             capture_output=True,
@@ -38,28 +38,45 @@ def compilar_latex(caminho_main_tex: str, diretorio_saida: str):
             check=False,
             cwd=diretorio_saida
         )
-
-        # --- MODIFICAÇÃO TEMPORÁRIA: SEMPRE IMPRIMA A SAÍDA ---
-        print("\n--- SAÍDA DO PDFLATEX (STDOUT) ---")
+        print("\n--- SAÍDA DO PDFLATEX (PRIMEIRA PASSADA - STDOUT) ---")
         print(result.stdout)
-        print("--- FIM SAÍDA DO PDFLATEX (STDOUT) ---\n")
-
         if result.stderr:
-            print("\n--- SAÍDA DO PDFLATEX (STDERR) ---")
+            print("\n--- SAÍDA DO PDFLATEX (PRIMEIRA PASSADA - STDERR) ---")
             print(result.stderr)
-            print("--- FIM SAÍDA DO PDFLATEX (STDERR) ---\n")
-        # --- FIM MODIFICAÇÃO TEMPORÁRIA ---
+        print("--- FIM SAÍDA DO PDFLATEX (PRIMEIRA PASSADA) ---\n")
 
         if result.returncode != 0:
-            print("❌ Erro fatal ao compilar o PDF. Código de retorno não-zero.")
-            raise RuntimeError(f"Erro na compilação LaTeX. Código de retorno: {result.returncode}. "
-                               f"Verifique os logs acima para detalhes do erro de compilação LaTeX.")
+            print("❌ Erro fatal na primeira passada do pdflatex.")
+            raise RuntimeError(f"Erro na compilação LaTeX (primeira passada). Código de retorno: {result.returncode}. "
+                               f"Verifique os logs acima para detalhes.")
+
+        # Second pass to resolve cross-references like table of contents
+        print(f"Executando segunda passada do pdflatex em {diretorio_saida}...")
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            encoding='latin-1',
+            check=False,
+            cwd=diretorio_saida
+        )
+        print("\n--- SAÍDA DO PDFLATEX (SEGUNDA PASSADA - STDOUT) ---")
+        print(result.stdout)
+        if result.stderr:
+            print("\n--- SAÍDA DO PDFLATEX (SEGUNDA PASSADA - STDERR) ---")
+            print(result.stderr)
+        print("--- FIM SAÍDA DO PDFLATEX (SEGUNDA PASSADA) ---\n")
+
+        if result.returncode != 0:
+            print("❌ Erro fatal na segunda passada do pdflatex.")
+            raise RuntimeError(f"Erro na compilação LaTeX (segunda passada). Código de retorno: {result.returncode}. "
+                               f"Verifique os logs acima para detalhes.")
         else:
-            print(f"PDF compilado (retorno 0) em: {Path(diretorio_saida) / main_tex_filename.replace('.tex', '.pdf')}")
-            # Verificação se o PDF foi realmente criado
-            if not (Path(diretorio_saida) / main_tex_filename.replace('.tex', '.pdf')).exists():
-                print(f"AVISO: pdflatex retornou 0, mas o PDF '{main_tex_filename.replace('.tex', '.pdf')}' NÃO foi encontrado em '{diretorio_saida}'.")
+            pdf_path = Path(diretorio_saida) / main_tex_filename.replace('.tex', '.pdf')
+            if not pdf_path.exists():
+                print(f"AVISO: pdflatex retornou 0, mas o PDF '{pdf_path.name}' NÃO foi encontrado em '{diretorio_saida}'.")
                 print("Isso pode indicar um problema de permissão ou compilação inválida.")
+            else:
+                print(f"PDF compilado com sucesso em: {pdf_path}")
 
     except FileNotFoundError as fnf_e:
         print(f"Erro de arquivo não encontrado durante a compilação LaTeX (verificação Python): {fnf_e}")

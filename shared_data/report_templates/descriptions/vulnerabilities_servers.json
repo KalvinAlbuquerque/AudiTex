@@ -3,15 +3,15 @@
         "Categoria": "Falta de Proteção Adequada",
         "Subcategoria": "Configuração Incorreta de Protocolos e Segurança",
         "Vulnerabilidade": "Ausência de WAF (Web Application Firewall)",
-        "Descrição": "Sem um WAF, as aplicações web estão vulneráveis a uma ampla gama de ataques, incluindo SQL Injection, Cross-Site Scripting (XSS) e outras ameaças baseadas na web[cite: 4]. A falta de proteção pode resultar em comprometimentos de segurança significativos, afetando a confidencialidade, integridade e disponibilidade das informações[cite: 5].",
-        "Solução": "A lista completa das aplicações que possuem esta vulnerabilidade pode ser encontrada no Anexo B[cite: 6]. É crucial implementar um WAF para proteger as aplicações web contra ataques comuns e garantir a segurança das informações.",
+        "Descrição": "Sem um WAF, as aplicações web estão vulneráveis a uma ampla gama de ataques, incluindo SQL Injection, Cross-Site Scripting (XSS) e outras ameaças baseadas na web. A falta de proteção pode resultar em comprometimentos de segurança significativos, afetando a confidencialidade, integridade e disponibilidade das informações[cite: 5].",
+        "Solução": "A lista completa das aplicações que possuem esta vulnerabilidade pode ser encontrada no Anexo B. É crucial implementar um WAF para proteger as aplicações web contra ataques comuns e garantir a segurança das informações.",
         "Imagem": ""
     },
     {
         "Categoria": "Vulnerabilidades associadas a versões obsoletas",
         "Subcategoria": "Softwares Desatualizados",
         "Vulnerabilidade": "Atualizações de Segurança para Internet Explorer (Setembro de 2017)",
-        "Descrição": "A instalação do Internet Explorer no host remoto está desatualizada e carece de atualizações de segurança[cite: 7]. Como resultado, o navegador está vulnerável a várias falhas de segurança, incluindo: Vulnerabilidade de Divulgação de Informações (CVE-2017-8529)[cite: 8], Vulnerabilidade de Execução Remota de Código (CVE-2017-8750, CVE-2017-8747, CVE-2017-8749, CVE-2017-8741, CVE-2017-8748)[cite: 9, 12, 13, 14], Vulnerabilidade de Falsificação (Spoofing) (CVE-2017-8733) [cite: 10, 11] e Vulnerabilidade de Divulgação de Informações devido a Verificação Imprópria do Domínio Pai (CVE-2017-8736)[cite: 15].",
+        "Descrição": "A instalação do Internet Explorer no host remoto está desatualizada e carece de atualizações de segurança. Como resultado, o navegador está vulnerável a várias falhas de segurança, incluindo: Vulnerabilidade de Divulgação de Informações (CVE-2017-8529)[cite: 8], Vulnerabilidade de Execução Remota de Código (CVE-2017-8750, CVE-2017-8747, CVE-2017-8749, CVE-2017-8741, CVE-2017-8748)[cite: 9, 12, 13, 14], Vulnerabilidade de Falsificação (Spoofing) (CVE-2017-8733) [cite: 10, 11] e Vulnerabilidade de Divulgação de Informações devido a Verificação Imprópria do Domínio Pai (CVE-2017-8736)[cite: 15].",
         "Solução": "Devido à grande quantidade de vulnerabilidades de segurança no Internet Explorer, a recomendação é remover o Internet Explorer o mais rápido possível[cite: 16]. O Internet Explorer não recebe mais atualizações e não é mais considerado seguro[cite: 17]. Em seu lugar, recomenda-se utilizar navegadores mais modernos e seguros, como o Microsoft Edge, que recebe atualizações regulares de segurança[cite: 18]. Caso não seja possível remover o Internet Explorer imediatamente, a melhor prática é restringir o seu uso e monitorar ativamente possíveis riscos de segurança[cite: 19].",
         "Imagem": ""
     },

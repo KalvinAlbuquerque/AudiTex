@@ -142,6 +142,7 @@ def gerarRelatorioDeLista():
         base_report_template_path = Path(config.caminho_report_templates_base)
         static_vm_donut_output_path = str(base_report_template_path / "assets" / "images-vmscan" / "total-vulnerabilidades-vm-donut.png")
         static_webapp_donut_output_path = str(base_report_template_path / "assets" / "images-was" / "total-vulnerabilidades-was-donut.png")
+        static_webapp_x_site_output_path = str(base_report_template_path / "assets" / "images-was" / "vulnerabilidades-x-site.png")
 
         # Inicializa o ID do novo relatório e o destino de pré-processamento
         novo_relatorio_id = db_instance.insert_one(
@@ -196,13 +197,13 @@ def gerarRelatorioDeLista():
             
             # Gerar o gráfico de vulnerabilidades por site diretamente na pasta de destino do relatório
             # Este gráfico é específico de cada relatório, não deve ir para o template base
-            graph_output_webapp_x_site_full_path = str(pasta_destino_relatorio_temp_base / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png")
+            #graph_output_webapp_x_site_full_path = str(pasta_destino_relatorio_temp_base / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png")
             gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
                 str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv"),
-                graph_output_webapp_x_site_full_path,
+                static_webapp_x_site_output_path,
                 "descendente"
             )
-            print(f"Gráfico (Vulnerabilidades por Site) salvo em: {graph_output_webapp_x_site_full_path}")
+            print(f"Gráfico (Vulnerabilidades por Site) salvo em: {static_webapp_x_site_output_path}")
 
         else:
             print(f"Aviso: Não há scans WebApp na pasta {lista_doc.get('pastas_scans_webapp')} ou a pasta está vazia. Pulando processamento WebApp.")
@@ -251,6 +252,7 @@ def gerarRelatorioDeLista():
         graph_output_vm_donut_relative = "assets/images-vmscan/total-vulnerabilidades-vm-donut.png"
         graph_output_webapp_donut_relative = "assets/images-was/total-vulnerabilidades-was-donut.png"
 
+        vulnerabilidade_x_site_png_path = "images-was/vulnerabilidades-x-site.png" 
         terminar_relatorio_preprocessado(
             nome_secretaria,
             sigla_secretaria,
@@ -274,9 +276,11 @@ def gerarRelatorioDeLista():
             total_sites,
             criado_por_vm_scan, 
             graph_output_vm_donut_relative, 
-            graph_output_webapp_donut_relative 
+            graph_output_webapp_donut_relative,
+            vulnerabilidade_x_site_png_path
         )
         
+        compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
         compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
 
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
@@ -290,3 +294,36 @@ def gerarRelatorioDeLista():
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
         return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500
+    
+    
+@reports_bp.route('/baixarRelatorioPdf/', methods=['POST'])
+def baixarRelatorioPdf():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Dados não fornecidos"}), 400
+        
+        relatorio_id = data.get("idRelatorio")
+        if not relatorio_id:
+            return jsonify({"error": "ID do relatório não fornecido."}), 400
+
+        # Constrói o caminho completo para o PDF
+        # O PDF está em: /app/shared_data/generated_reports/<relatorioId>/relatorio_preprocessado/RelatorioPronto/main.pdf
+        pdf_path = Path(config.caminho_shared_relatorios) / relatorio_id / "relatorio_preprocessado" / "RelatorioPronto" / "main.pdf"
+
+        if not pdf_path.exists():
+            print(f"Erro: PDF não encontrado no caminho: {pdf_path}")
+            return jsonify({"error": "PDF do relatório não encontrado."}), 404
+        
+        # Usa send_file para enviar o PDF
+        return send_file(
+            str(pdf_path),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"Relatorio_Auditoria_{relatorio_id}.pdf"
+        )
+    except Exception as e:
+        print(f"Erro ao baixar relatório PDF: {str(e)}")
+        import traceback
+        traceback.print_exc() # Imprime o traceback completo para depuração
+        return jsonify({"error": f"Erro interno ao baixar o PDF: {str(e)}"}), 500

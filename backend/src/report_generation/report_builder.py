@@ -483,8 +483,9 @@ def terminar_relatorio_preprocessado(
     total_vulnerabilidades_baixa_servidores: str,
     total_sites: str,
     criado_por_vm_scan: str,
-    graph_output_vm_donut: str, # NOVO: Adicione este parâmetro
-    graph_output_webapp_donut: str # NOVO: Adicione este parâmetro
+    graph_output_vm_donut: str, 
+    graph_output_webapp_donut: str,
+    graph_output_webapp_x_site: str # NOVO: Adicione este parâmetro aqui
 ):
     """
     Finaliza o relatório LaTeX, inserindo os conteúdos preprocessados e placeholders.
@@ -580,7 +581,15 @@ def terminar_relatorio_preprocessado(
         'TOTAL_SITES': total_sites,
         'CRIADO_POR_VM_SCAN': criado_por_vm_scan,
         'GRAFICO_DONUT_SERVIDORES': vm_donut_graph_latex, 
-        'GRAFICO_DONUT_WEBAPP': webapp_donut_graph_latex, # NOVO: Placeholder para o gráfico de donut de WebApp
+        'GRAFICO_DONUT_WEBAPP': webapp_donut_graph_latex, 
+        'GRAFICO_WEBAPP_X_SITE': r"""
+            \begin{figure}[h!]
+            \centering
+            \includegraphics[width=1.0\textwidth]{""" + graph_output_webapp_x_site + r"""}
+            \caption{Total de vulnerabilidades por site}
+            \end{figure}
+            \FloatBarrier
+            """, # NOVO: Adicione este placeholder
     }
 
     latex_editado = substituir_placeholders(
