@@ -48,7 +48,7 @@ function GerarRelatorio() {
         setLoading(true);
 
         // Ajustado a validação para os nomes das variáveis atuais
-        if (!nomeSecretaria.trim() || !siglaSecretaria.trim() || !dataInicio.trim() || !dataFim.trim() || !ano.trim() || !mes.trim()) {
+        if (!nomeSecretaria.trim() || !siglaSecretaria.trim() || !dataInicio.trim() || !dataFim.trim() || !ano.trim() || !mes.trim() || !linkGoogleDrive.trim()) { // Adicionado linkGoogleDrive.trim()
             toast.warn('Por favor, preencha todos os campos obrigatórios.');
             setLoading(false);
             return;
@@ -177,14 +177,15 @@ function GerarRelatorio() {
                     </div>
 
                     <div className="col-span-2"> {/* span duas colunas */}
-                        <label className="block text-black mb-1">Link da pasta do Google Drive (opcional)</label>
+                        <label className="block text-black mb-1">Link da pasta do Google Drive</label> {/* Removido (opcional) */}
                         <input
-                            type="text" // Alterado de type="url" para type="text"
+                            type="text"
                             name="linkGoogleDrive"
                             value={linkGoogleDrive}
                             onChange={(e) => setLinkGoogleDrive(e.target.value)}
                             className="w-full p-2 border rounded text-black"
                             placeholder="https://drive.google.com/..."
+                            required 
                         />
                     </div>
 

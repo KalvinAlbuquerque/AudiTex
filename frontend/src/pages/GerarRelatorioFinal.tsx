@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom'; // Importar useNavigate
 import { ClipLoader } from 'react-spinners';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify'; // Importar toast e ToastContainer
 import 'react-toastify/dist/ReactToastify.css';
 
-import { reportsApi } from '../api/backendApi'; // Importar reportsApi
+import { reportsApi } from '../api/backendApi';
+import MissingVulnerabilitiesModal from './MissingVulnerabilitiesModal'; // Importar o modal
 
 function GerarRelatorioFinal() {
     const { relatorioId } = useParams<{ relatorioId: string }>();
+    const navigate = useNavigate(); // Hook para navegação
+
     const [loading, setLoading] = useState(false);
     const [missingVulnerabilities, setMissingVulnerabilities] = useState<{ sites: string[]; servers: string[] } | null>(null);
+    const [isSitesModalOpen, setIsSitesModalOpen] = useState(false); // Estado para abrir modal de sites
+    const [isServersModalOpen, setIsServersModalOpen] = useState(false); // Estado para abrir modal de servers
 
     useEffect(() => {
         if (relatorioId) {
@@ -20,9 +25,7 @@ function GerarRelatorioFinal() {
     const fetchMissingVulnerabilities = async () => {
         setLoading(true);
         try {
-            // Chamadas para obter vulnerabilidades ausentes (sites)
             const missingSites = await reportsApi.getMissingVulnerabilities(relatorioId!, 'sites');
-            // Chamadas para obter vulnerabilidades ausentes (servers)
             const missingServers = await reportsApi.getMissingVulnerabilities(relatorioId!, 'servers');
             
             setMissingVulnerabilities({ sites: missingSites, servers: missingServers });
@@ -40,7 +43,6 @@ function GerarRelatorioFinal() {
         }
     };
 
-    // NOVO: Função para lidar com o download do PDF
     const handleDownloadPdf = async () => {
         if (!relatorioId) {
             toast.error('ID do relatório não disponível para download.');
@@ -48,11 +50,11 @@ function GerarRelatorioFinal() {
         }
         setLoading(true);
         try {
-            const pdfBlob = await reportsApi.downloadReportPdf(relatorioId); // Chama a API para baixar o PDF
+            const pdfBlob = await reportsApi.downloadReportPdf(relatorioId);
             const url = window.URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Relatorio_Auditoria_${relatorioId}.pdf`; // Nome do arquivo
+            a.download = `Relatorio_Auditoria_${relatorioId}.pdf`;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -66,8 +68,12 @@ function GerarRelatorioFinal() {
         }
     };
 
+    const handleBackToHome = () => {
+      navigate('/'); // Navega para a página inicial
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100 p-6">
+        <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center justify-center">
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Status do Relatório</h1>
 
             {loading ? (
@@ -75,7 +81,7 @@ function GerarRelatorioFinal() {
                     <ClipLoader size={50} color={"#1a73e8"} />
                 </div>
             ) : (
-                <div className="bg-white shadow-md rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+                <div className="bg-white shadow-md rounded-lg p-6 mb-8 w-full max-w-2xl">
                     <p className="text-lg text-gray-700 text-center mb-4">
                         Processo de geração do relatório concluído para o ID: <span className="font-semibold">{relatorioId}</span>
                     </p>
@@ -84,7 +90,7 @@ function GerarRelatorioFinal() {
                     <div className="text-center mb-6">
                         <button
                             onClick={handleDownloadPdf}
-                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition"
+                            className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition"
                             disabled={loading}
                         >
                             Baixar Relatório PDF
@@ -94,36 +100,69 @@ function GerarRelatorioFinal() {
                     {missingVulnerabilities && (
                         <>
                             {missingVulnerabilities.sites.length > 0 && (
-                                <div className="mb-4">
-                                    <h2 className="text-xl font-semibold text-red-600 mb-2">Vulnerabilidades WebApp Ausentes:</h2>
-                                    <ul className="list-disc list-inside text-gray-700">
-                                        {missingVulnerabilities.sites.map((vuln, index) => (
-                                            <li key={`site-missing-${index}`}>{vuln}</li>
-                                        ))}
-                                    </ul>
+                                <div className="mb-4 flex justify-between items-center bg-red-100 p-3 rounded">
+                                    <h2 className="text-xl font-semibold text-red-600">Vulnerabilidades WebApp Ausentes:</h2>
+                                    <button
+                                        onClick={() => setIsSitesModalOpen(true)}
+                                        className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-1 px-3 rounded text-sm transition" // Corrigido
+                                    >
+                                        Visualizar ({missingVulnerabilities.sites.length})
+                                    </button>
                                 </div>
                             )}
 
                             {missingVulnerabilities.servers.length > 0 && (
-                                <div className="mb-4">
-                                    <h2 className="text-xl font-semibold text-red-600 mb-2">Vulnerabilidades Servidor Ausentes:</h2>
-                                    <ul className="list-disc list-inside text-gray-700">
-                                        {missingVulnerabilities.servers.map((vuln, index) => (
-                                            <li key={`server-missing-${index}`}>{vuln}</li>
-                                        ))}
-                                    </ul>
+                                <div className="mb-4 flex justify-between items-center bg-red-100 p-3 rounded">
+                                    <h2 className="text-xl font-semibold text-red-600">Vulnerabilidades Servidor Ausentes:</h2>
+                                    <button
+                                        onClick={() => setIsServersModalOpen(true)}
+                                        className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-1 px-3 rounded text-sm transition" // Corrigido
+                                    >
+                                        Visualizar ({missingVulnerabilities.servers.length})
+                                    </button>
                                 </div>
                             )}
 
                             {missingVulnerabilities.sites.length === 0 && missingVulnerabilities.servers.length === 0 && (
-                                <p className="text-green-600 text-center text-lg">
+                                <p className="text-green-600 text-center text-lg mt-4">
                                     Todas as vulnerabilidades foram categorizadas e descritas!
                                 </p>
                             )}
                         </>
                     )}
+
+                    {/* Botão para voltar à página inicial */}
+                    <div className="text-center mt-6">
+                        <button
+                            onClick={handleBackToHome}
+                            className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition" // Corrigido
+                        >
+                            Voltar para o Início
+                        </button>
+                    </div>
                 </div>
             )}
+
+            {/* Modal para Vulnerabilidades WebApp Ausentes */}
+            {missingVulnerabilities && (
+                <MissingVulnerabilitiesModal
+                    isOpen={isSitesModalOpen}
+                    onClose={() => setIsSitesModalOpen(false)}
+                    title="Vulnerabilidades WebApp Ausentes"
+                    vulnerabilities={missingVulnerabilities.sites}
+                />
+            )}
+
+            {/* Modal para Vulnerabilidades Servidor Ausentes */}
+            {missingVulnerabilities && (
+                <MissingVulnerabilitiesModal
+                    isOpen={isServersModalOpen}
+                    onClose={() => setIsServersModalOpen(false)}
+                    title="Vulnerabilidades Servidor Ausentes"
+                    vulnerabilities={missingVulnerabilities.servers}
+                />
+            )}
+
             <ToastContainer />
         </div>
     );

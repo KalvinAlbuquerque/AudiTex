@@ -450,7 +450,8 @@ def escape_latex(text: str) -> str:
     text = text.replace('}', '\\}')
     text = text.replace('~', '\\textasciitilde{}')
     text = text.replace('^', '\\textasciicircum{}')
-    text = text.replace('\\', '\\textbackslash{}')
+    # REMOVA A LINHA ABAIXO:
+    # text = text.replace('\\', '\\textbackslash{}')
     return text
 
 def substituir_placeholders(conteudo: str, substituicoes_globais: Dict[str, str]) -> str:

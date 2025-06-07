@@ -327,3 +327,39 @@ def baixarRelatorioPdf():
         import traceback
         traceback.print_exc() # Imprime o traceback completo para depuração
         return jsonify({"error": f"Erro interno ao baixar o PDF: {str(e)}"}), 500
+    
+@reports_bp.route('/getRelatorioMissingVulnerabilities/', methods=['GET'])
+def getRelatorioMissingVulnerabilities():
+    try:
+        relatorio_id = request.args.get('relatorioId')
+        vuln_type = request.args.get('type') # 'sites' or 'servers'
+
+        if not relatorio_id or not vuln_type:
+            return jsonify({"error": "Parâmetros 'relatorioId' e 'type' são obrigatórios."}), 400
+
+        # Constrói o nome do arquivo TXT com base no tipo
+        if vuln_type == 'sites':
+            filename = "vulnerabilidades_sites_ausentes.txt"
+        elif vuln_type == 'servers':
+            filename = "vulnerabilidades_servidores_ausentes.txt"
+        else:
+            return jsonify({"error": "Tipo de vulnerabilidade inválido. Use 'sites' ou 'servers'."}), 400
+
+        # Constrói o caminho completo para o arquivo TXT
+        # Os arquivos TXT são salvos em: /app/shared_data/generated_reports/<relatorioId>/relatorio_preprocessado/
+        file_path = Path(config.caminho_shared_relatorios) / relatorio_id / "relatorio_preprocessado" / filename
+
+        if not file_path.exists():
+            # Se o arquivo não existir, significa que não há vulnerabilidades ausentes daquele tipo
+            return jsonify({"content": []}), 200 # Retorna uma lista vazia, indicando que não há ausentes
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content_lines = [line.strip() for line in f if line.strip()] # Lê as linhas e remove vazias
+        
+        return jsonify({"content": content_lines}), 200
+
+    except Exception as e:
+        print(f"Erro ao obter vulnerabilidades ausentes: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Erro interno ao buscar vulnerabilidades ausentes: {str(e)}"}), 500

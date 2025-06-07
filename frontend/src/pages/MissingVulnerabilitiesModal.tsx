@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'react-toastify'; // Importar toast
 
 interface MissingVulnerabilitiesModalProps {
   isOpen: boolean;
@@ -15,6 +16,20 @@ const MissingVulnerabilitiesModal: React.FC<MissingVulnerabilitiesModalProps> = 
 }) => {
   if (!isOpen) return null;
 
+  const handleCopy = () => {
+    if (vulnerabilities.length > 0) {
+      const textToCopy = vulnerabilities.join('\n');
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          toast.success('Vulnerabilidades copiadas para a área de transferência!'); // Alterado de alert para toast
+        })
+        .catch(err => {
+          console.error('Erro ao copiar vulnerabilidades:', err);
+          toast.error('Falha ao copiar vulnerabilidades.'); // Alterado de alert para toast
+        });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full m-4">
@@ -28,10 +43,18 @@ const MissingVulnerabilitiesModal: React.FC<MissingVulnerabilitiesModalProps> = 
         ) : (
           <p className="text-gray-600 mb-4">Nenhuma vulnerabilidade ausente.</p>
         )}
-        <div className="flex justify-end">
+        <div className="flex justify-end space-x-3">
+          {vulnerabilities.length > 0 && (
+            <button
+              onClick={handleCopy}
+              className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition duration-300"
+            >
+              Copiar Todas
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+            className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition duration-300"
           >
             Fechar
           </button>
