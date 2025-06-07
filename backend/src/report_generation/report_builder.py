@@ -12,7 +12,7 @@ from ..core.json_utils import carregar_json_utf, _load_data_
 from ..core.config import Config
 
 # Inicializa a configuração
-config = Config("config.json")
+config = Config("config.json") #
 
 # =======================================================================
 # FUNÇÕES DE CARREGAMENTO DE VULNERABILIDADES DE ARQUIVOS TXT DE RELATÓRIO
@@ -467,7 +467,8 @@ def terminar_relatorio_preprocessado(
     total_vulnerabilidades_media_servidores: str,
     total_vulnerabilidades_baixa_servidores: str,
     total_sites: str,
-    criado_por_vm_scan: str # <--- NOVO: Adicione este parâmetro
+    criado_por_vm_scan: str,
+    graph_output_vm_donut: str # NOVO: Adicione este parâmetro
 ):
     """
     Finaliza o relatório LaTeX, inserindo os conteúdos preprocessados e placeholders.
@@ -502,6 +503,23 @@ def terminar_relatorio_preprocessado(
 
     total_vulnerabilidades_combinado = int(total_vulnerabilidades_web) + int(total_vulnerabilidade_vm)
 
+    # NOVO: Placeholder para o gráfico de donut de servidores
+    vm_donut_graph_latex = ""
+    if graph_output_vm_donut:
+        vm_donut_graph_latex = (
+            r"""
+            \begin{figure}[h!]
+            \centering
+            \includegraphics[width=0.5\textwidth]{""" + graph_output_vm_donut + r"""}
+            \caption{Distribuição de Vulnerabilidades de Servidores por Severidade}
+            \end{figure}
+            \FloatBarrier
+            """
+        )
+    else:
+        print("Aviso: Caminho do gráfico donut de servidores não fornecido ou vazio, não será incluído no LaTeX.")
+
+
     substituicoes_globais = {
         'NOME SECRETARIA': nome_secretaria,
         'SIGLA': sigla_secretaria,
@@ -524,7 +542,8 @@ def terminar_relatorio_preprocessado(
         'TOTAL VULNERABILIDADES SERVIDORES MEDIA': total_vulnerabilidades_media_servidores,
         'TOTAL VULNERABILIDADES SERVIDORES BAIXA': total_vulnerabilidades_baixa_servidores,
         'TOTAL_SITES': total_sites,
-        'CRIADO_POR_VM_SCAN': criado_por_vm_scan, # <--- NOVO: Adicione este placeholder
+        'CRIADO_POR_VM_SCAN': criado_por_vm_scan,
+        'GRAFICO_DONUT_SERVIDORES': vm_donut_graph_latex, 
     }
 
     latex_editado = substituir_placeholders(

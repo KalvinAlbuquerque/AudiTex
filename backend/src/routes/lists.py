@@ -431,7 +431,7 @@ def getTodasAsListas():
             db_instance.close()
         return jsonify({"error": f"Erro interno: {str(e)}"}), 500
     
-@lists_bp.route('/gerarRelatorioDeLista/', methods=['POST'])
+""" @lists_bp.route('/gerarRelatorioDeLista/', methods=['POST'])
 #@cross_origin(origins=["http://localhost:5173", "127.0.0.1"])
 def gerarRelatorioDeLista():
 
@@ -592,7 +592,7 @@ def gerarRelatorioDeLista():
         print(f"Erro ao gerar relatório de lista: {str(e)}")
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
-        return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500
+        return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500 """
 
 @lists_bp.route('/excluirLista/', methods=['POST'])
 #@cross_origin(origins=["http://localhost:5173", "127.0.0.1"])

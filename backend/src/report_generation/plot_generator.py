@@ -49,15 +49,14 @@ def gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(input_file: str, graph_
         print(f"Erro ao gerar o gráfico de quantitativo de vulnerabilidades por site: {e}")
     
     
-def gerar_grafico_donut(vulnerabilidades: dict):
+def gerar_grafico_donut(vulnerabilidades: dict, output_path: str): # Adicionado output_path
     """
-    Gera um gráfico de pizza com buraco (donut) para as vulnerabilidades por tipo.
+    Gera um gráfico de pizza com buraco (donut) para as vulnerabilidades por tipo e salva em um arquivo PNG.
 
     Args:
         vulnerabilidades (dict): Dicionário com as contagens das vulnerabilidades por tipo.
+        output_path (str): Caminho para salvar o arquivo PNG do gráfico.
     """
-    # Create a list of (label, size, color) tuples,
-    # filtering out any categories with a size of 0.
     data = []
     # Usar .get() para evitar KeyError se a chave não existir
     if vulnerabilidades.get('critical', 0) > 0:
@@ -72,7 +71,9 @@ def gerar_grafico_donut(vulnerabilidades: dict):
     # If no data, exit the function to avoid an empty chart
     if not data:
         print("Nenhuma vulnerabilidade para exibir no gráfico donut.")
-        return
+        # Se não houver dados, criar um gráfico vazio com uma mensagem ou um placeholder.
+        # Ou simplesmente não gerar o arquivo. Por agora, vamos não gerar.
+        return False # Indica que o gráfico não foi gerado com sucesso
 
     labels = [item[0] for item in data]
     sizes = [item[1] for item in data]
@@ -88,7 +89,6 @@ def gerar_grafico_donut(vulnerabilidades: dict):
     fig, ax = plt.subplots(figsize=(8, 8)) # Aumenta o tamanho da figura
     wedges, texts, autotexts = ax.pie(
         sizes,
-        # labels=labels, # REMOVIDO: Para remover os nomes em cima das cores
         colors=colors,
         explode=explode,
         startangle=90,
@@ -102,17 +102,20 @@ def gerar_grafico_donut(vulnerabilidades: dict):
         autotext.set_color('black') # Garante que o número seja visível
 
     # Posicionamento da legenda
-    # A legenda deve vir depois dos plots e antes do tight_layout
     plt.legend(wedges, labels, title="Severidade", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
 
     # Formatar como círculo
     ax.axis('equal')
 
+    # Cria o diretório de saída se não existir
+    output_dir = os.path.dirname(output_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
     # Ajusta o layout para evitar que a legenda se sobreponha ao gráfico
     plt.tight_layout()
 
-    # Onde salvar o gráfico de donut será definido pela função que o chamar.
-    # Esta função não salva automaticamente para ser mais reutilizável.
-    plt.show() # Por enquanto, mantém show() para visualização em ambiente de desenvolvimento,
-               # mas para produção, isso deve ser substituído por plt.savefig() com um caminho.
+    plt.savefig(output_path) # Salva o gráfico
     plt.close() # Fecha a figura para liberar memória
+    print(f"Gráfico donut salvo em: {output_path}")
+    return True # Indica que o gráfico foi gerado com sucesso

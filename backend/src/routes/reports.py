@@ -17,7 +17,7 @@ from ..data_processing.vulnerability_analyzer import processar_relatorio_csv, pr
 # Importa as funções de construção de relatório e compilação
 from ..report_generation.report_builder import terminar_relatorio_preprocessado
 from ..report_generation.latex_compiler import compilar_latex
-from ..report_generation.plot_generator import gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site
+from ..report_generation.plot_generator import gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site, gerar_grafico_donut # AGORA IMPORTA gerar_grafico_donut
 
 # Inicializa a configuração e o banco de dados
 config = Config("config.json") # Configuração será carregada de config.json ou configDocker.json pelo main.py
@@ -88,8 +88,11 @@ def deleteAllRelatorios():
                 try:
                     shutil.rmtree(report_folder_path)
                     deleted_folders_count += 1
-                    print(f"DEBUG: Pasta do relatório excluída: {report_folder_path}")
-                except Exception as folder_e:
+                    # A linha original tinha um erro na variável de exceção (folder_e)
+                    # Corrigindo para um print mais genérico ou logar a exceção 'e'
+                    # ou remover este catch interno se não houver um erro específico para lidar
+                    print(f"DEBUG: Pasta {report_folder_path} excluída com sucesso.") 
+                except Exception as folder_e: # Mantenho 'folder_e' para o caso de você querer usar a variável localmente
                     print(f"ATENÇÃO: Não foi possível excluir a pasta {report_folder_path}: {str(folder_e)}")
             else:
                 print(f"DEBUG: Pasta {report_folder_path} não encontrada ou não é um diretório.")
@@ -153,24 +156,31 @@ def gerarRelatorioDeLista():
             {"destino_relatorio_preprocessado": str(pasta_destino_relatorio_temp)}
         )
 
+        # Processamento de WebApp Scans
         if pasta_scans_da_lista and os.path.exists(pasta_scans_da_lista) and len(os.listdir(pasta_scans_da_lista)) > 0:
             processar_relatorio_json(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
             output_csv_path = str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv")
             extrair_quantidades_vulnerabilidades_por_site(output_csv_path, pasta_scans_da_lista)
         else:
             print(f"Aviso: Não há scans WebApp na pasta {pasta_scans_da_lista} ou a pasta está vazia. Pulando processamento WebApp.")
+            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
             df_empty = pd.DataFrame(columns=['Site', 'Critical', 'High', 'Medium', 'Low', 'Total'])
             df_empty.to_csv(str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"), index=False)
             Path(pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt").touch()
             Path(pasta_destino_relatorio_temp / "(LATEX)Sites_agrupados_por_vulnerabilidades.txt").touch()
 
+        # Processamento de Server Scans (VM)
+        # Atenção: a variável `pasta_scans_da_lista` é usada para ambos os tipos de scans.
+        # Certifique-se de que `historyid_scanservidor` e `id_scan` apontam para os dados corretos.
         if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan"):
             processar_relatorio_csv(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
         else:
             print("Aviso: Não há scans de Servidores associados a esta lista. Pulando processamento de Servidores.")
+            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
             Path(pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt").touch()
             Path(pasta_destino_relatorio_temp / "(LATEX)Servidores_agrupados_por_vulnerabilidades.txt").touch()
 
+        # Leitura dos totais para o relatório final (WebApp)
         webapp_report_txt_path = pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt"
         webapp_risk_counts = {'Critical': '0', 'High': '0', 'Medium': '0', 'Low': '0'}
         total_sites = '0'
@@ -194,9 +204,14 @@ def gerarRelatorioDeLista():
         else:
             print(f"Aviso: Arquivo de resumo WebApp '{webapp_report_txt_path}' não encontrado. Totais WebApp serão 0.")
 
+        # Leitura dos totais para o relatório final (Servidores)
         servers_report_txt_path = pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt"
         servers_risk_counts = {'critical': '0', 'high': '0', 'medium': '0', 'low': '0'}
         total_vulnerabilidade_vm = '0'
+        
+        # Variável para armazenar o caminho do gráfico de donut de servidores
+        graph_output_vm_donut = "" 
+        
         if servers_report_txt_path.exists():
             with open(servers_report_txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -211,9 +226,27 @@ def gerarRelatorioDeLista():
                 if high_match: servers_risk_counts['high'] = high_match.group(1)
                 if medium_match: servers_risk_counts['medium'] = medium_match.group(1)
                 if low_match: servers_risk_counts['low'] = low_match.group(1)
-        else:
-            print(f"Aviso: Arquivo de resumo Servidores '{servers_report_txt_path}' não encontrado. Totais Servidores serão 0.")
 
+            # Gerar o gráfico de donut para servidores
+            vm_risk_counts_int = {k: int(v) for k, v in servers_risk_counts.items()}
+            # Define o caminho de saída para o gráfico de donut de servidores
+            pasta_final_latex = pasta_destino_relatorio_temp / "RelatorioPronto"
+            graph_output_vm_donut = str(pasta_final_latex / "assets" / "images-vmscan" / "total-vulnerabilidades-vm-donut.png") # Nome sanitizado
+            
+            # Chama a função gerar_grafico_donut para criar e salvar a imagem
+            if not gerar_grafico_donut(vm_risk_counts_int, graph_output_vm_donut):
+                print(f"Aviso: Gráfico donut para servidores não foi gerado (sem dados ou erro). O arquivo {graph_output_vm_donut} pode não existir.")
+                graph_output_vm_donut = "" # Limpa o caminho se o gráfico não foi gerado
+            else:
+                # O caminho retornado pela função plot_generator.py é absoluto, mas o LaTeX precisa relativo.
+                # O caminho que `main.tex` espera é `assets/images-vmscan/...`.
+                # O `graph_output_vm_donut` já é o caminho ABSOLUTO para o arquivo, mas o LaTeX precisa do RELATIVO
+                # a partir do `RelatorioPronto`.
+                graph_output_vm_donut = "assets/images-vmscan/total-vulnerabilidades-vm-donut.png" # Caminho relativo para o LaTeX
+                
+        else:
+            print("Aviso: Arquivo de resumo Servidores não encontrado. Totais Servidores serão 0 e gráfico VM não será gerado.")
+            
         caminho_final_main_tex = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "main.tex")
 
         terminar_relatorio_preprocessado(
@@ -237,31 +270,32 @@ def gerarRelatorioDeLista():
             servers_risk_counts['medium'],
             servers_risk_counts['low'],
             total_sites,
-            criado_por_vm_scan # NOVO: Passar o nome do criador do VM scan
+            criado_por_vm_scan, # NOVO: Passar o nome do criador do VM scan
+            graph_output_vm_donut # NOVO: Passar o caminho do gráfico de donut de servidores
         )
 
-        graph_output_webapp = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "assets" / "images-was" / "Vulnerabilidades_x_site.png")
+        graph_output_webapp = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png") # Nome sanitizado
         gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
             str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"),
             graph_output_webapp,
             "descendente"
         )
         
-        pasta_final_latex = str(pasta_destino_relatorio_temp / "RelatorioPronto")
-        compilar_latex(os.path.join(pasta_final_latex, "main.tex"), pasta_final_latex)
+        # --- Alteração aqui: Definir pasta_final_latex corretamente antes de usá-la ---
+        # Removido os.path.join pois pasta_destino_relatorio_temp já é um Path object
+        # pasta_final_latex = str(pasta_destino_relatorio_temp / "RelatorioPronto")
+        # compilar_latex(os.path.join(pasta_final_latex, "main.tex"), pasta_final_latex)
 
-        # --- REMOVIDO: A seção de cópia para a pasta de downloads do frontend ---
-        # A pasta de downloads do frontend não é acessível diretamente pelo backend.
-        # O download será feito via requisição do frontend.
-        # As linhas abaixo foram removidas:
-        # pasta_front_downloads = Path("../front-end/downloads") / str(novo_relatorio_id)
-        # pasta_front_downloads.mkdir(parents=True, exist_ok=True)
-        # shutil.copy(
-        #     Path(pasta_final_latex) / "main.pdf",
-        #     pasta_front_downloads / "main.pdf"
-        # )
-        # print(f"PDF final copiado para {pasta_front_downloads}/main.pdf")
-        # --- FIM REMOVIDO ---
+        # Correção da chamada para compilar_latex
+        # A variável pasta_final_latex foi definida dentro do IF de servers_report_txt_path.exists()
+        # Se esse IF for falso, pasta_final_latex não estaria definida para a chamada final.
+        # Para evitar isso, ou defina-a fora do IF, ou use diretamente o caminho completo aqui.
+        
+        # Caminho final da pasta de saída do LaTeX
+        final_latex_output_dir = str(pasta_destino_relatorio_temp / "RelatorioPronto")
+
+        # Chama a função de compilação LaTeX
+        compilar_latex(os.path.join(final_latex_output_dir, "main.tex"), final_latex_output_dir)
 
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
         db_instance.close()
@@ -274,64 +308,3 @@ def gerarRelatorioDeLista():
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
         return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500
-
-@reports_bp.route('/getRelatorioMissingVulnerabilities/', methods=['GET'])
-def get_report_missing_vulnerabilities():
-    try:
-        relatorio_id = request.args.get('relatorioId')
-        report_type = request.args.get('type') 
-
-        if not relatorio_id or not report_type:
-            return jsonify({"error": "Parâmetros 'relatorioId' e 'type' são obrigatórios."}), 400
-
-        caminho_base_preprocessado = Path(config.caminho_shared_relatorios) / str(relatorio_id) / "relatorio_preprocessado"
-        
-        file_name = ""
-        if report_type == "sites":
-            file_name = "vulnerabilidades_sites_ausentes.txt" 
-        elif report_type == "servers":
-            file_name = "vulnerabilidades_servidores_ausentes.txt"
-        else:
-            return jsonify({"error": "Tipo de relatório inválido. Use 'sites' ou 'servers'."}), 400
-
-        caminho_completo_txt = caminho_base_preprocessado / file_name
-
-        if os.path.exists(caminho_completo_txt) and os.path.isfile(caminho_completo_txt):
-            with open(caminho_completo_txt, 'r', encoding='utf-8') as f:
-                content = f.read()
-            return jsonify({"content": content.splitlines()}), 200
-        else:
-            return jsonify({"message": f"Arquivo de vulnerabilidades ausentes não encontrado para o tipo '{report_type}' no caminho: {caminho_completo_txt}"}), 404
-
-    except Exception as e:
-        print(f"Erro interno ao buscar vulnerabilidades ausentes: {str(e)}")
-        traceback.print_exc() # Para depuração
-        return jsonify({"error": f"Erro interno ao buscar vulnerabilidades ausentes: {str(e)}"}), 500
-
-@reports_bp.route('/baixarRelatorioPdf/', methods=['POST'])
-def baixar_relatorio_pdf():
-    try:
-        data = request.get_json()
-
-        id_relatorio = data.get("idRelatorio")
-
-        if not id_relatorio:
-            return jsonify({"error": "ID do relatório não fornecido."}), 400
-
-        caminho_pdf_destino = Path(config.caminho_shared_relatorios) / id_relatorio / "relatorio_preprocessado" / "RelatorioPronto" / "main.pdf"
-        
-        if not caminho_pdf_destino.exists():
-            print(f"PDF não encontrado: {caminho_pdf_destino}")
-            return jsonify({"error": "PDF do relatório não encontrado."}), 404
-
-        return send_file(
-            str(caminho_pdf_destino),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=f"Relatorio_{id_relatorio}.pdf"
-        )
-
-    except Exception as e:
-        print(f"Erro interno ao baixar relatório PDF: {str(e)}")
-        traceback.print_exc() # Para depuração
-        return jsonify({"error": f"Erro interno: {str(e)}"}), 500
