@@ -1,16 +1,12 @@
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Remova o import de listsApi, axios temporariamente para este teste
-// import { listsApi, Lista } from '../api/backendApi';
-// import axios from 'axios';
-
 import ConfirmDeleteModal from '../pages/ConfirmDeleteModal'; 
 
-interface Lista { // Mantenha a interface Lista aqui, se removê-la do backendApi.ts
+interface Lista {
     idLista: string;
     nomeLista: string;
     relatorioGerado?: boolean;
@@ -18,7 +14,7 @@ interface Lista { // Mantenha a interface Lista aqui, se removê-la do backendAp
 
 function ListaDeScans() {
     const [listas, setListas] = useState<Lista[]>([]);
-    const [loading, setLoading] = useState(false); // Adicionado setLoading
+    const [loading, setLoading] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [listToDeleteId, setListToDeleteId] = useState<string | null>(null);
     const [listToDeleteName, setListToDeleteName] = useState<string>('');
@@ -31,14 +27,11 @@ function ListaDeScans() {
     }, []);
 
     const fetchListas = async () => {
-        setLoading(true); // Adicionado setLoading
+        setLoading(true);
         try {
-            // CORREÇÃO TEMPORÁRIA: Chamada direta com a URL CORRETA no frontend
-            // VAMOS USAR /lists/ (INGLÊS) para VERIFICAR SE O BACKEND RESPONDE
             const response = await fetch("http://localhost:5000/lists/getTodasAsListas/");
             
             if (!response.ok) {
-                // Se a resposta não for OK (ex: 404, 500), jogue um erro
                 throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
             }
 
@@ -48,7 +41,7 @@ function ListaDeScans() {
             console.error("Erro ao buscar listas:", error);
             toast.error(error.message || "Erro ao buscar listas. Verifique o console.");
         } finally {
-            setLoading(false); // Adicionado setLoading
+            setLoading(false);
         }
     };
 
@@ -79,9 +72,8 @@ function ListaDeScans() {
 
         setLoading(true);
         try {
-            // Chamada direta para excluir (temporário)
             const response = await fetch("http://localhost:5000/lists/excluirLista/", {
-                method: "POST", // ou DELETE dependendo da rota exata
+                method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
@@ -89,10 +81,10 @@ function ListaDeScans() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json(); // Tenta ler JSON de erro
+                const errorData = await response.json();
                 throw new Error(errorData.error || `Erro HTTP: ${response.status}`);
             }
-            const responseData = await response.json(); // Assume que a resposta de sucesso também é JSON
+            const responseData = await response.json();
             toast.success(responseData.message || 'Lista excluída com sucesso!');
             
             setListaSelecionada(null);
@@ -113,6 +105,16 @@ function ListaDeScans() {
         setListToDeleteId(null);
         setListToDeleteName('');
     };
+
+    // NOVO: Função para lidar com o clique no botão "Gerar Relatório"
+    const handleGenerateReport = () => {
+        if (listaSelecionada) {
+            navigate(`/gerar-relatorio/${listaSelecionada.idLista}`);
+        } else {
+            toast.warn('Selecione uma lista para gerar o relatório.');
+        }
+    };
+
 
     return (
         <div
@@ -169,6 +171,19 @@ function ListaDeScans() {
                         }`}
                     >
                         Remover Lista
+                    </button>
+
+                    {/* NOVO BOTÃO: Gerar Relatório */}
+                    <button
+                        disabled={!listaSelecionada || loading}
+                        onClick={handleGenerateReport}
+                        className={`px-4 py-2 rounded transition ${
+                            listaSelecionada
+                                ? "bg-green-500 text-white hover:bg-green-600 cursor-pointer"
+                                : "bg-gray-400 text-white cursor-not-allowed"
+                        }`}
+                    >
+                        Gerar Relatório
                     </button>
                 </div>
 

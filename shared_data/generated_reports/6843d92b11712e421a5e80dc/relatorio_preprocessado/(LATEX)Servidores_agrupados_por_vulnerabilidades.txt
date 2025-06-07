@@ -1,0 +1,94 @@
+%-------------- INÍCIO DA CATEGORIA Vulnerabilidades Relacionadas à Versões não suportadas --------------
+\subsection{Vulnerabilidades Relacionadas à Versões não suportadas}
+Riscos provenientes do uso de software ou sistemas operacionais desatualizados e fora de suporte, que não recebem mais atualizações de segurança e permanecem vulneráveis a ataques.
+
+%-------------- INÍCIO DA SUBCATEGORIA Protocolos e Cifras Depreciadas --------------
+\subsubsection{Protocolos e Cifras Depreciadas}
+Descrição não disponível.
+
+\begin{enumerate}
+%-------------- INÍCIO DA VULNERABILIDADE SSL Medium Strength Cipher Suites Supported (SWEET32) --------------
+\item \textbf{\texttt{SSL Medium Strength Cipher Suites Supported (SWEET32)}}
+\textbf{Descrição:} O host remoto suporta o uso de cifras SSL com força de criptografia média[cite: 151]. Cifras de força média incluem aquelas que utilizam comprimentos de chave de pelo menos 64 bits e menos de 112 bits ou aquelas que utilizam o conjunto de cifras 3DES (Triple Data Encryption Standard)[cite: 152]. A vulnerabilidade conhecida como SWEET32 explora fraquezas em cifras baseadas em 3DES devido ao seu tamanho de bloco reduzido (64 bits)[cite: 153]. Essa característica facilita ataques que dependem da repetição de blocos de criptografia (birthday attacks), especialmente em ambientes onde um grande volume de dados é transmitido pela mesma sessão criptografada[cite: 154]. A criptografia de força média é significativamente mais fácil de ser comprometida, especialmente quando o atacante está na mesma rede física do alvo[cite: 155]. O suporte a cifras de força média pode resultar em ataques de descriptografia[cite: 156], comprometimento da privacidade [cite: 157] e não conformidade regulatória[cite: 158].
+
+\textbf{Solução:} A solução recomendada é reconfigurar a aplicação afetada para evitar o uso de cifras de força média[cite: 159]. Isso inclui desativar o suporte ao 3DES e garantir que apenas cifras fortes, que utilizem comprimentos de chave modernos e modos de criptografia robustos, sejam habilitadas[cite: 160]. A substituição de cifras de força média por alternativas mais seguras melhora a resistência contra ataques criptográficos e garante a conformidade com os padrões de segurança cibernética mais recentes[cite: 161].
+
+\textbf{Total de Hosts Afetados:} 2
+
+\textbf{Hosts Afetados:}
+\begin{itemize}
+    \item \url{172.20.13.7}
+    \item \url{172.21.39.30}
+\end{itemize}
+
+%-------------- FIM DA VULNERABILIDADE SSL Medium Strength Cipher Suites Supported (SWEET32) --------------
+%-------------- INÍCIO DA VULNERABILIDADE TLS Version 1.0 Protocol Detection --------------
+\item \textbf{\texttt{TLS Version 1.0 Protocol Detection}}
+\textbf{Descrição:} O serviço remoto está aceitando conexões criptografadas usando TLS 1.0[cite: 144]. Embora o TLS 1.0 tenha sido uma melhoria significativa em relação ao SSL, ele ainda possui várias falhas de design criptográfico[cite: 145]. Versões mais recentes do TLS, como 1.2 e 1.3, foram projetadas para resolver essas falhas de maneira mais robusta e devem ser utilizadas sempre que possível[cite: 146]. A utilização do TLS 1.0 pode expor a comunicação a falhas de design criptográfico[cite: 147], incompatibilidade com navegadores modernos [cite: 148] e não conformidade com regulamentos de segurança como o PCI DSS[cite: 149].
+
+\textbf{Solução:} A solução para mitigar essa vulnerabilidade é habilitar o suporte para TLS 1.2 e 1.3 e desabilitar completamente o TLS 1.0[cite: 150].
+
+\textbf{Total de Hosts Afetados:} 2
+
+\textbf{Hosts Afetados:}
+\begin{itemize}
+    \item \url{172.20.13.7}
+    \item \url{172.21.39.30}
+\end{itemize}
+
+%-------------- FIM DA VULNERABILIDADE TLS Version 1.0 Protocol Detection --------------
+\end{enumerate}
+%-------------- FIM DA SUBCATEGORIA Protocolos e Cifras Depreciadas --------------
+%-------------- FIM DA CATEGORIA Vulnerabilidades Relacionadas à Versões não suportadas --------------
+%-------------- INÍCIO DA CATEGORIA Vulnerabilidades relacionadas à Cifras Não suportadas --------------
+\subsection{Vulnerabilidades relacionadas à Cifras Não suportadas}
+Falhas associadas ao uso de algoritmos de criptografia fracos ou desatualizados, que podem ser facilmente quebrados por atacantes, comprometendo a confidencialidade dos dados.
+
+%-------------- INÍCIO DA SUBCATEGORIA Protocolos e Cifras Depreciadas --------------
+\subsubsection{Protocolos e Cifras Depreciadas}
+Descrição não disponível.
+
+\begin{enumerate}
+%-------------- INÍCIO DA VULNERABILIDADE SSL RC4 Cipher Suites Supported (Bar Mitzvah) --------------
+\item \textbf{\texttt{SSL RC4 Cipher Suites Supported (Bar Mitzvah)}}
+\textbf{Descrição:} O host remoto suporta o uso do algoritmo de cifra RC4 em uma ou mais suítes criptográficas[cite: 181]. O RC4 possui falhas conhecidas na geração de seu fluxo de bytes pseudoaleatório, introduzindo diversos vieses que reduzem sua aleatoriedade[cite: 182]. Se um mesmo texto em claro for criptografado repetidamente (por exemplo, cookies HTTP) e um atacante conseguir capturar um grande número de textos cifrados (dezenas de milhões), há a possibilidade de inferir o conteúdo original da comunicação[cite: 183]. Isso compromete a confidencialidade dos dados transmitidos.
+
+\textbf{Solução:} Recomenda-se reconfigurar a aplicação afetada para evitar o uso de cifras RC4[cite: 184]. Sempre que possível, utilize TLS 1.2 com suítes criptográficas baseadas em AES-GCM, garantindo compatibilidade com navegadores e servidores web suportados[cite: 185]. Essa atualização melhora a segurança das comunicações e mitiga os riscos associados ao uso de cifras obsoletas[cite: 186].
+
+\textbf{Total de Hosts Afetados:} 1
+
+\textbf{Hosts Afetados:}
+\begin{itemize}
+    \item \url{172.21.39.30}
+\end{itemize}
+
+%-------------- FIM DA VULNERABILIDADE SSL RC4 Cipher Suites Supported (Bar Mitzvah) --------------
+%-------------- INÍCIO DA VULNERABILIDADE TLS Version 1.1 Deprecated Protocol --------------
+\item \textbf{\texttt{TLS Version 1.1 Deprecated Protocol}}
+\textbf{Descrição:} O serviço remoto analisado aceita conexões criptografadas utilizando o protocolo TLS 1.1[cite: 87]. Este protocolo está obsoleto e não oferece suporte para conjuntos de cifras atuais e recomendados[cite: 88]. Cifras que utilizam encriptação antes da computação MAC, bem como modos de autenticação como GCM (Galois/Counter Mode), não podem ser utilizados com o TLS 1.1[cite: 89]. Desde 31 de março de 2020, endpoints que não oferecem suporte ao TLS 1.2 ou superior não funcionam adequadamente com os principais navegadores da web e fornecedores de tecnologia[cite: 90]. O uso contínuo do TLS 1.1 representa um risco à segurança e à compatibilidade[cite: 91]. O suporte ao TLS 1.1 pode levar a comprometimento da segurança[cite: 92], incompatibilidade com navegadores modernos [cite: 93] e não conformidade regulatória, como PCI DSS[cite: 94].
+
+\textbf{Solução:} A solução recomendada é habilitar o suporte para TLS 1.2 e/ou TLS 1.3 e desativar o suporte para o TLS 1.1[cite: 95]. Isso garante o uso de protocolos modernos que oferecem maior segurança, compatibilidade e conformidade com os padrões do setor[cite: 96]. Recomendamos que todas as configurações e sistemas sejam revisados para implementar essas alterações o mais breve possível[cite: 97]. A atualização para protocolos mais modernos não apenas mitiga vulnerabilidades associadas ao TLS 1.1, mas também melhora o desempenho das conexões e a experiência geral do usuário[cite: 98].
+
+\textbf{Total de Hosts Afetados:} 2
+
+\textbf{Hosts Afetados:}
+\begin{itemize}
+    \item \url{172.20.13.7}
+    \item \url{172.21.39.30}
+\end{itemize}
+
+%-------------- FIM DA VULNERABILIDADE TLS Version 1.1 Deprecated Protocol --------------
+\end{enumerate}
+%-------------- FIM DA SUBCATEGORIA Protocolos e Cifras Depreciadas --------------
+%-------------- FIM DA CATEGORIA Vulnerabilidades relacionadas à Cifras Não suportadas --------------
+%-------------- INÍCIO DAS VULNERABILIDADES SEM CATEGORIA --------------
+\section{Vulnerabilidades sem Categoria}
+\begin{itemize}
+    \item \texttt{ICMP Timestamp Request Remote Date Disclosure}
+    \item \texttt{SSL Certificate Cannot Be Trusted}
+    \item \texttt{SSL Self-Signed Certificate}
+    \item \texttt{Terminal Services Doesn't Use Network Level Authentication (NLA) Only}
+    \item \texttt{SSL Certificate with Wrong Hostname}
+    \item \texttt{SMB Signing not required}
+\end{itemize}
+%-------------- FIM DAS VULNERABILIDADES SEM CATEGORIA --------------

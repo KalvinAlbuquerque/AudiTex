@@ -1,0 +1,83 @@
+Resumo das Vulnerabilidades por Risk Factor (Servidores):
+
+Critical: 0
+High: 2
+Medium: 13
+Low: 2
+
+Total de Vulnerabilidades: 17
+
+Hosts analisados:
+Total de Hosts: 2
+172.21.39.30
+172.20.13.7
+
+Vulnerabilidades em comum entre os Hosts:
+
+
+Vulnerabilidade: ICMP Timestamp Request Remote Date Disclosure
+Severidade: Low
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: SSL Medium Strength Cipher Suites Supported (SWEET32)
+Severidade: High
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: SSL Certificate Cannot Be Trusted
+Severidade: Medium
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: SSL Self-Signed Certificate
+Severidade: Medium
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: Terminal Services Doesn't Use Network Level Authentication (NLA) Only
+Severidade: Medium
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: TLS Version 1.0 Protocol Detection
+Severidade: Medium
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: TLS Version 1.1 Deprecated Protocol
+Severidade: Medium
+Total de Hosts Afetados: 2
+Hosts Afetados:
+172.20.13.7
+172.21.39.30
+
+Vulnerabilidade: SSL Certificate with Wrong Hostname
+Severidade: Medium
+Total de Hosts Afetados: 1
+Hosts Afetados:
+172.20.13.7
+
+Vulnerabilidade: SMB Signing not required
+Severidade: Medium
+Total de Hosts Afetados: 1
+Hosts Afetados:
+172.20.13.7
+
+Vulnerabilidade: SSL RC4 Cipher Suites Supported (Bar Mitzvah)
+Severidade: Medium
+Total de Hosts Afetados: 1
+Hosts Afetados:
+172.21.39.30

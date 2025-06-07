@@ -226,8 +226,6 @@ function PesquisarScanVM() {
                             {(foundScan as any).uuid && (
                                 <p><strong>UUID (Principal do Scan):</strong> {(foundScan as any).uuid}</p>
                             )}
-                            <p><strong>Último Scan ID (WAS):</strong> {foundScan.last_scan?.scan_id || 'N/A'}</p>
-                            <p><strong>Último Scan UUID (History ID - WAS):</strong> {foundScan.last_scan?.uuid || 'N/A'}</p>
                             {/* Adicionado log para histórico de VM */}
                             {foundScan.history && foundScan.history.length > 0 && (
                                 <p><strong>Último Histórico VM (UUID):</strong> {foundScan.history[foundScan.history.length - 1].uuid || 'N/A'}</p>

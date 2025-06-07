@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-// import axios from 'axios'; // Não precisamos mais de axios diretamente
-import Header from '../components/Header';
-import Footer from '../components/Footer';
+import { useParams, useNavigate, Link } from 'react-router-dom'; // Adicionado Link
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,10 +13,10 @@ function GerarRelatorio() {
 
     const [nomeSecretaria, setNomeSecretaria] = useState('');
     const [siglaSecretaria, setSiglaSecretaria] = useState('');
-    const [dataInicio, setDataInicio] = useState('');
-    const [dataFim, setDataFim] = useState('');
-    const [ano, setAno] = useState('');
-    const [mes, setMes] = useState('');
+    const [dataInicio, setDataInicio] = useState(''); // Mudar para tipo text no input
+    const [dataFim, setDataFim] = useState('');     // Mudar para tipo text no input
+    const [ano, setAno] = useState('');             // Mudar para tipo text no input
+    const [mes, setMes] = useState('');             // Mudar para tipo text no input
     const [linkGoogleDrive, setLinkGoogleDrive] = useState('');
     const [loading, setLoading] = useState(false);
     const [nomeListaAssociada, setNomeListaAssociada] = useState('');
@@ -50,7 +47,8 @@ function GerarRelatorio() {
         e.preventDefault();
         setLoading(true);
 
-        if (!nomeSecretaria || !siglaSecretaria || !dataInicio || !dataFim || !ano || !mes) {
+        // Ajustado a validação para os nomes das variáveis atuais
+        if (!nomeSecretaria.trim() || !siglaSecretaria.trim() || !dataInicio.trim() || !dataFim.trim() || !ano.trim() || !mes.trim()) {
             toast.warn('Por favor, preencha todos os campos obrigatórios.');
             setLoading(false);
             return;
@@ -80,135 +78,128 @@ function GerarRelatorio() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-gray-100">
-            <Header />
-            <ToastContainer />
-            <main className="flex-grow p-6 flex justify-center items-center">
-                <div className="bg-white shadow-md rounded-lg p-8 w-full max-w-4xl">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-                        Gerar Relatório para Lista: {nomeListaAssociada}
-                    </h2>
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label htmlFor="nomeSecretaria" className="block text-gray-700 text-sm font-bold mb-2">
-                                Nome da Secretaria:
-                            </label>
-                            <input
-                                type="text"
-                                id="nomeSecretaria"
-                                name="nomeSecretaria"
-                                value={nomeSecretaria}
-                                onChange={(e) => setNomeSecretaria(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="siglaSecretaria" className="block text-gray-700 text-sm font-bold mb-2">
-                                Sigla da Secretaria:
-                            </label>
-                            <input
-                                type="text"
-                                id="siglaSecretaria"
-                                name="siglaSecretaria"
-                                value={siglaSecretaria}
-                                onChange={(e) => setSiglaSecretaria(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="dataInicio" className="block text-gray-700 text-sm font-bold mb-2">
-                                Data de Início da Auditoria:
-                            </label>
-                            <input
-                                type="date"
-                                id="dataInicio"
-                                name="dataInicio"
-                                value={dataInicio}
-                                onChange={(e) => setDataInicio(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="dataFim" className="block text-gray-700 text-sm font-bold mb-2">
-                                Data de Fim da Auditoria:
-                            </label>
-                            <input
-                                type="date"
-                                id="dataFim"
-                                name="dataFim"
-                                value={dataFim}
-                                onChange={(e) => setDataFim(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="mes" className="block text-gray-700 text-sm font-bold mb-2">
-                                Mês da Conclusão (por extenso):
-                            </label>
-                            <input
-                                type="text"
-                                id="mes"
-                                name="mes"
-                                value={mes}
-                                onChange={(e) => setMes(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                placeholder="Ex: Junho"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="ano" className="block text-gray-700 text-sm font-bold mb-2">
-                                Ano da Conclusão:
-                            </label>
-                            <input
-                                type="number"
-                                id="ano"
-                                name="ano"
-                                value={ano}
-                                onChange={(e) => setAno(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                placeholder="Ex: 2024"
-                                required
-                                disabled={loading}
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label htmlFor="linkGoogleDrive" className="block text-gray-700 text-sm font-bold mb-2">
-                                Link do Google Drive (opcional):
-                            </label>
-                            <input
-                                type="url"
-                                id="linkGoogleDrive"
-                                name="linkGoogleDrive"
-                                value={linkGoogleDrive}
-                                onChange={(e) => setLinkGoogleDrive(e.target.value)}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                placeholder="https://drive.google.com/..."
-                                disabled={loading}
-                            />
-                        </div>
-                        <div className="md:col-span-2 text-center">
-                            <button
-                                type="submit"
-                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                                disabled={loading}
-                            >
-                                {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Gerar Relatório'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </main>
-            <Footer />
+        <div
+            className="min-h-screen bg-cover bg-center flex"
+            style={{ backgroundImage: "url('/assets/fundo.png')" }}
+        >
+            {/* Sidebar AZUL à esquerda (1/5 da largura da tela) */}
+            <div className="w-1/5 bg-white-800 text-white flex items-center justify-center p-4">
+                <Link to="/">
+                    <img
+                        src="/assets/logocogel.jpg"
+                        alt="COGEL Logo"
+                        className="w-32 h-auto"
+                    />
+                </Link>
+            </div>
+
+            {/* Conteúdo central (área BRANCA à direita, 4/5 da largura da tela) */}
+            <div className="w-4/5 p-10 bg-white rounded-l-lg shadow-md">
+                <h1 className="text-2xl font-bold text-black mb-8">
+                    Gerar Relatório para Lista: {nomeListaAssociada}
+                </h1>
+
+                <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-black mb-1">Nome da Secretaria</label>
+                        <input
+                            type="text"
+                            name="nomeSecretaria"
+                            value={nomeSecretaria}
+                            onChange={(e) => setNomeSecretaria(e.target.value)}
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-black mb-1">Sigla</label>
+                        <input
+                            type="text"
+                            name="siglaSecretaria"
+                            value={siglaSecretaria}
+                            onChange={(e) => setSiglaSecretaria(e.target.value)}
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-black mb-1">Data de Início</label>
+                        <input
+                            type="text" // Alterado de type="date" para type="text"
+                            name="dataInicio"
+                            value={dataInicio}
+                            onChange={(e) => setDataInicio(e.target.value)}
+                            placeholder="Exemplo: 01 de Janeiro de 2023"
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-black mb-1">Mês de Conclusão</label>
+                        <input
+                            type="text"
+                            name="mes"
+                            value={mes}
+                            onChange={(e) => setMes(e.target.value)}
+                            placeholder="Exemplo: Junho"
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-black mb-1">Data Final</label>
+                        <input
+                            type="text" // Alterado de type="date" para type="text"
+                            name="dataFim"
+                            value={dataFim}
+                            onChange={(e) => setDataFim(e.target.value)}
+                            placeholder="Exemplo: 30 de Junho de 2023"
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-black mb-1">Ano de Conclusão</label>
+                        <input
+                            type="text" // Alterado de type="number" para type="text"
+                            name="ano"
+                            value={ano}
+                            onChange={(e) => setAno(e.target.value)}
+                            placeholder="Exemplo: 2023"
+                            className="w-full p-2 border rounded text-black"
+                            required
+                        />
+                    </div>
+
+                    <div className="col-span-2"> {/* span duas colunas */}
+                        <label className="block text-black mb-1">Link da pasta do Google Drive (opcional)</label>
+                        <input
+                            type="text" // Alterado de type="url" para type="text"
+                            name="linkGoogleDrive"
+                            value={linkGoogleDrive}
+                            onChange={(e) => setLinkGoogleDrive(e.target.value)}
+                            className="w-full p-2 border rounded text-black"
+                            placeholder="https://drive.google.com/..."
+                        />
+                    </div>
+
+                    <div className="col-span-2 flex justify-end mt-4">
+                        <button
+                            type="submit"
+                            className="bg-[#007BB4] text-white px-6 py-2 rounded hover:bg-[#009BE2] cursor-pointer"
+                            disabled={loading}
+                        >
+                            {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Concluir'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <ToastContainer /> {/* Mantido para exibir toasts */}
         </div>
     );
 }

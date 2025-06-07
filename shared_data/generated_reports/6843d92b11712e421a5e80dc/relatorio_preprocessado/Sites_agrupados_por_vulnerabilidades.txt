@@ -1,0 +1,265 @@
+Resumo das Vulnerabilidades por Risk Factor (Web Apps):
+
+Critical: 85
+High: 305
+Medium: 175
+Low: 229
+Total de Vulnerabilidades: 794
+
+
+Domínios analisados:
+
+Total de sites: 2
+https://comunicacao.salvador.ba.gov.br/
+https://www.credenciamento.salvador.ba.gov.br/PCRE/
+
+Vulnerabilidades em comum, entre os sites/URI:
+
+
+Vulnerabilidade: Cookie Without SameSite Flag Detected
+Plugin ID: 115540
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Missing 'Cache-Control' Header
+Plugin ID: 112553
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: HTTP Header Information Disclosure
+Plugin ID: 98618
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: SSL/TLS Weak Cipher Suites Supported
+Plugin ID: 112539
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Cookie Without Secure Flag Detected
+Plugin ID: 98064
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: HTML/CSS Injection
+Plugin ID: 114134
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Cookie Without HttpOnly Flag Detected
+Plugin ID: 98063
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: SSL/TLS Forward Secrecy Cipher Suites Not Supported
+Plugin ID: 98617
+Total de URI Afetadas: 2
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.99 Session Fixation
+Plugin ID: 98969
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.107 Information Disclosure
+Plugin ID: 112676
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.108 Multiple Vulnerabilities
+Plugin ID: 112712
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Missing Content Security Policy
+Plugin ID: 112551
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.0 < 7.0.85 Security Constraint Weakness
+Plugin ID: 112307
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.23 < 7.0.91 Open Redirect
+Plugin ID: 112315
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.81 Multiple Vulnerabilities
+Plugin ID: 112310
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.100 Multiple Vulnerabilities
+Plugin ID: 98948
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.109 Authentication Weakness
+Plugin ID: 112902
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.77 Information Disclosure
+Plugin ID: 112312
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.104 Multiple Vulnerabilities
+Plugin ID: 112429
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.25 < 7.0.90 Multiple Vulnerabilities
+Plugin ID: 112305
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.0 < 7.0.94 Remote Code Execution on Windows
+Plugin ID: 98541
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.28 < 7.0.88 Denial of Service
+Plugin ID: 112306
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Missing 'Content-Type' Header
+Plugin ID: 98648
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat Unsupported Version
+Plugin ID: 98232
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.78 Remote Error Page Manipulation
+Plugin ID: 112302
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: CVS/SVN User Disclosure
+Plugin ID: 98079
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.82 Remote Code Execution via JSP Upload
+Plugin ID: 112309
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Missing 'X-Content-Type-Options' Header
+Plugin ID: 112529
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Missing HTTP Strict Transport Security Policy
+Plugin ID: 98056
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Mixed Resource Detection
+Plugin ID: 98091
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.99 Local Privilege Escalation
+Plugin ID: 98972
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat 7.0.x < 7.0.105 Denial of Service
+Plugin ID: 112558
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Disclosed Hong Kong Identity Number
+Plugin ID: 113943
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: DOM-based Cross-Site Scripting (XSS)
+Plugin ID: 98109
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat Default Files
+Plugin ID: 98524
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Apache Tomcat Manager Detected
+Plugin ID: 98525
+Total de URI Afetadas: 1
+URI Afetadas:
+https://www.credenciamento.salvador.ba.gov.br
+
+Vulnerabilidade: Permissive Content Security Policy Detected
+Plugin ID: 112554
+Total de URI Afetadas: 1
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+
+Vulnerabilidade: Missing 'X-Frame-Options' Header
+Plugin ID: 98060
+Total de URI Afetadas: 1
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+
+Vulnerabilidade: Permissive HTTP Strict Transport Security Policy Detected
+Plugin ID: 98715
+Total de URI Afetadas: 1
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br
+
+Vulnerabilidade: Source Code Passive Disclosure
+Plugin ID: 98779
+Total de URI Afetadas: 1
+URI Afetadas:
+https://comunicacao.salvador.ba.gov.br

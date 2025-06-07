@@ -16,6 +16,7 @@ yarn-error.log*
 .pnp/
 .pnp.js
 *.env
+shared_data/json_exports/
 
 # Ignorar arquivos e pastas específicos do Python
 __pycache__/
