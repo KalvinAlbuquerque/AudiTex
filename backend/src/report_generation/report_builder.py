@@ -6,13 +6,14 @@ from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime, date
 from babel.dates import format_date
+import unicodedata # Adicionado para transliteração de nomes de arquivo de imagem
 
 # Importa as funções de utilidade e JSON do core
 from ..core.json_utils import carregar_json_utf, _load_data_
 from ..core.config import Config
 
 # Inicializa a configuração
-config = Config("config.json") #
+config = Config("config.json")
 
 # =======================================================================
 # FUNÇÕES DE CARREGAMENTO DE VULNERABILIDADES DE ARQUIVOS TXT DE RELATÓRIO
@@ -56,6 +57,7 @@ def carregar_vulnerabilidades_do_relatorio(caminho_arquivo: str) -> List[Dict[st
         if vulnerability:
             vulnerabilities.append({
                 "Vulnerabilidade": vulnerability,
+                "Severidade": "unknown", # Valor padrão para 'severity' para webapp, já que não é extraído do TXT
                 "Total de URI Afetadas": total_affected_uris,
                 "URI Afetadas": affected_uris
             })
@@ -132,15 +134,17 @@ def gerar_relatorio_txt(output_file: str, risk_factor_counts: dict, common_vulne
             output.write("\n".join(targets))
             output.write("\n\nVulnerabilidades em comum, entre os sites/URI:\n\n")
             sorted_vulnerabilities = sorted(common_vulnerabilities.items(), key=lambda x: len(set(x[1])), reverse=True)
-            for (name, plugin_id), uris in sorted_vulnerabilities: # 'plugin_id' ainda está aqui para iteração, mas não será impresso
-                if len(uris) > 1:
-                    unique_uris = sorted(list(set(uris)))
-                    output.write(f"\nVulnerabilidade: {name}\n")
-                    # REMOVIDO: output.write(f"Plugin ID: {plugin_id}\n")
-                    output.write(f"Total de URI Afetadas: {len(unique_uris)}\n")
-                    output.write(f"URI Afetadas:\n")
+            for (name, plugin_id), uris in sorted_vulnerabilities:
+                unique_uris = sorted(list(set(uris)))
+                output.write(f"\nVulnerabilidade: {name}\n")
+                # REMOVIDO: output.write(f"Plugin ID: {plugin_id}\n")
+                output.write(f"Total de URI Afetadas: {len(unique_uris)}\n") # CORRIGIDO: Sempre escreve o total
+                output.write(f"URI Afetadas:\n")
+                if unique_uris: # Escreve as URIs se houver
                     for url in unique_uris:
                         output.write(f"{url}\n")
+                else: # Se não houver URIs, ainda indica
+                    output.write("Nenhuma URI afetada.\n") # Ou deixe em branco se preferir
         print(f"Relatório TXT para Web Apps gerado em: {output_file}")
     except Exception as e:
         print(f"Erro ao gerar relatório TXT para Web Apps: {e}")
@@ -202,6 +206,40 @@ def carregar_descritivo_vulnerabilidades(caminho_arquivo: str) -> List[Dict[str,
             })
     return descritivo
 
+def escape_path_for_latex(path_str: str) -> str:
+    """
+    Escapa uma string de caminho de arquivo para inclusão segura em comandos \includegraphics do LaTeX.
+    - Converte barras invertidas para barras normais.
+    - Translitera caracteres acentuados para ASCII.
+    - Substitui espaços por hífens.
+    - Escapa caracteres LaTeX problemáticos em nomes de arquivo/caminhos (como '_', '%', '#', '$', '&', '~', '^', '{', '}').
+    """
+    if not isinstance(path_str, str):
+        return path_str
+
+    # 1. Normaliza os separadores de caminho (Windows para Unix-like)
+    path_str = path_str.replace('\\', '/')
+
+    # 2. Translitera caracteres acentuados para ASCII (ex: 'Configurações' -> 'Configuracoes')
+    path_str = unicodedata.normalize('NFKD', path_str).encode('ascii', 'ignore').decode('utf-8')
+
+    # 3. Substitui espaços por hífens (comum em URLs e nomes de arquivo para evitar problemas)
+    path_str = path_str.replace(' ', '-')
+
+    # 4. Escapa caracteres LaTeX especiais que podem aparecer em caminhos de arquivo
+    # A ordem é importante para não escapar algo que já foi parte de um escape
+    path_str = path_str.replace('_', '\\_') # _ é operador de subscrito no LaTeX, deve ser escapado
+    path_str = path_str.replace('%', '\\%') # % é um comentário, deve ser escapado
+    path_str = path_str.replace('#', '\\#') # # é um marcador de seção, deve ser escapado
+    path_str = path_str.replace('$', '\\$') # $ é para modo matemático, deve ser escapado
+    path_str = path_str.replace('&', '\\&') # & é para alinhamento, deve ser escapado
+    path_str = path_str.replace('~', '\\textasciitilde{}') # ~ para espaço não quebrável
+    path_str = path_str.replace('^', '\\textasciicircum{}') # ^ para sobrescrito
+    path_str = path_str.replace('{', '\\{') # { } para agrupamento
+    path_str = path_str.replace('}', '\\}') # { } para agrupamento
+    
+    return path_str
+
 def gerar_conteudo_latex_para_vulnerabilidades(
     vulnerabilidades_do_relatorio_txt: List[Dict[str, Any]],
     vulnerabilidades_detalhes_json: List[Dict[str, Any]],
@@ -233,7 +271,7 @@ def gerar_conteudo_latex_para_vulnerabilidades(
             subcategoria_original = dados_vuln.get("Subcategoria", "Outras")
             descricao = dados_vuln.get("Descrição", "Descrição não disponível.")
             solucao = dados_vuln.get("Solução", "Solução não disponível.")
-            imagem = dados_vuln.get("Imagem", "")
+            imagem = dados_vuln.get("Imagem", "") # Imagem vem do JSON (não é limpo pelo script de higienização), será escapada aqui
             categoria_pad = padronizar(categoria_original)
             subcategoria_pad = padronizar(subcategoria_original)
             categorias_formatadas[categoria_pad] = categoria_original
@@ -272,7 +310,8 @@ def gerar_conteudo_latex_para_vulnerabilidades(
             "Descrição não disponível."
         )
         conteudo += f"%-------------- INÍCIO DA CATEGORIA {categoria_formatada} --------------\n"
-        conteudo += f"\\subsection{{{categoria_formatada}}}\n{descricao_categoria}\n\n"
+        # Aplica escape_latex aqui pois descricao_categoria vem agora como texto puro do JSON limpo
+        conteudo += f"\\subsection{{{categoria_formatada}}}\n{escape_latex(descricao_categoria)}\n\n"
 
         subcategorias = categorias_agrupadas.get(categoria_padronizada, {})
         for subcategoria_padronizada in sorted(subcategorias.keys(), key=lambda x: categorias_formatadas.get(x, x)):
@@ -284,15 +323,18 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                 "Descrição não disponível."
             )
             conteudo += f"%-------------- INÍCIO DA SUBCATEGORIA {subcategoria_formatada} --------------\n"
-            conteudo += f"\\subsubsection{{{subcategoria_formatada}}}\n{descricao_subcategoria}\n\n"
+            # Aplica escape_latex aqui pois descricao_subcategoria vem agora como texto puro do JSON limpo
+            conteudo += f"\\subsubsection{{{subcategoria_formatada}}}\n{escape_latex(descricao_subcategoria)}\n\n"
             conteudo += "\\begin{enumerate}\n"
 
             vulns_ordenadas = sorted(subcategorias[subcategoria_padronizada], key=lambda x: x['Vulnerabilidade'])
             for v in vulns_ordenadas:
                 conteudo += f"%-------------- INÍCIO DA VULNERABILIDADE {v['Vulnerabilidade']} --------------\n"
-                conteudo += f"\\item \\textbf{{\\texttt{{{v['Vulnerabilidade']}}}}}\n"
+                # Aplica escape_latex aqui pois Vulnerabilidade vem agora como texto puro do JSON limpo
+                conteudo += f"\\item \\textbf{{\\texttt{{{escape_latex(v['Vulnerabilidade'])}}}}}\n"
                 if v["Imagem"]:
-                    caminho_imagem_latex = v["Imagem"].replace(os.sep, '/')
+                    # O campo 'Imagem' precisa ser escapado para o LaTeX aqui no report_builder.py
+                    caminho_imagem_latex = escape_path_for_latex(v["Imagem"])
                     conteudo += (
                         r"""
                         \begin{figure}[h!]
@@ -302,8 +344,10 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                         \FloatBarrier
                         """
                     )
-                conteudo += f"\\textbf{{Descrição:}} {v['Descricao']}\n\n"
-                conteudo += f"\\textbf{{Solução:}} {v['Solucao']}\n\n"
+                # Aplica escape_latex aqui pois Descricao vem agora como texto puro do JSON limpo
+                conteudo += f"\\textbf{{Descrição:}} {escape_latex(v['Descricao'])}\n\n"
+                # Aplica escape_latex aqui pois Solucao vem agora como texto puro do JSON limpo
+                conteudo += f"\\textbf{{Solução:}} {escape_latex(v['Solucao'])}\n\n"
 
                 if tipo_vulnerabilidade == "webapp":
                     conteudo += f"\\textbf{{Total de URIs Afetadas:}} {v.get('Total de URIs Afetadas', 0)}\n\n"
@@ -317,6 +361,8 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                 if len(instancias_afetadas) > 10:
                     conteudo += f"\\textbf{{{label_instancias} (parcial):}}\n\\begin{{itemize}}\n"
                     for instancia in instancias_afetadas[:10]:
+                        # \url{} geralmente lida bem com caracteres especiais de URL;
+                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         conteudo += f"    \\item \\url{{{instancia}}}\n"
                     conteudo += "\\end{itemize}\n"
                     conteudo += (
@@ -324,15 +370,20 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                         f"encontrada no \\hyperref[anexoA]{{Anexo A}}.\\\\[0.5em]\n\n"
                     )
 
-                    anexo_conteudo += f"%-------------- INÍCIO DO ANEXO PARA {v['Vulnerabilidade']} --------------\n"
-                    anexo_conteudo += f"\\subsubsection*{{{v['Vulnerabilidade']}}}\n"
+                    conteudo_anexo_vuln_nome = escape_latex(v['Vulnerabilidade'])
+                    anexo_conteudo += f"%-------------- INÍCIO DO ANEXO PARA {conteudo_anexo_vuln_nome} --------------\n"
+                    anexo_conteudo += f"\\subsubsection*{{{conteudo_anexo_vuln_nome} }}\n"
                     anexo_conteudo += "\\begin{multicols}{3}\n\\small\n\\begin{itemize}\n"
                     for instancia in instancias_afetadas:
+                        # \url{} geralmente lida bem com caracteres especiais de URL;
+                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         anexo_conteudo += f"    \\item \\url{{{instancia}}}\n"
                     anexo_conteudo += "\\end{itemize}\n\\end{multicols}\n\n"
                 else:
                     conteudo += f"\\textbf{{{label_instancias}:}}\n\\begin{{itemize}}\n"
                     for instancia in instancias_afetadas:
+                        # \url{} geralmente lida bem com caracteres especiais de URL;
+                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         conteudo += f"    \\item \\url{{{instancia}}}\n"
                     conteudo += "\\end{itemize}\n\n"
                 conteudo += f"%-------------- FIM DA VULNERABILIDADE {v['Vulnerabilidade']} --------------\n"
@@ -346,7 +397,8 @@ def gerar_conteudo_latex_para_vulnerabilidades(
         conteudo += "%-------------- INÍCIO DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
         conteudo += "\\section{Vulnerabilidades sem Categoria}\n\\begin{itemize}\n"
         for vuln_nome in vulnerabilidades_sem_categoria:
-            conteudo += f"    \\item \\texttt{{{vuln_nome}}}\n"
+            # Aplica escape_latex aqui pois vuln_nome vem agora como texto puro do JSON limpo
+            conteudo += f"    \\item \\texttt{{{escape_latex(vuln_nome)}}}\n"
         conteudo += "\\end{itemize}\n"
         conteudo += "%-------------- FIM DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
 
@@ -359,18 +411,38 @@ def gerar_conteudo_latex_para_vulnerabilidades(
     return conteudo
 
 
+def escape_latex(text: str) -> str:
+    """
+    Escapes special LaTeX characters in a string.
+    """
+    text = text.replace('&', '\\&')
+    text = text.replace('%', '\\%')
+    text = text.replace('$', '\\$')
+    text = text.replace('#', '\\#')
+    text = text.replace('_', '\\_')
+    text = text.replace('{', '\\{')
+    text = text.replace('}', '\\}')
+    text = text.replace('~', '\\textasciitilde{}')
+    text = text.replace('^', '\\textasciicircum{}')
+    # REMOVA A LINHA ABAIXO:
+    # text = text.replace('\\', '\\textbackslash{}')
+    return text
+
+
 def montar_conteudo_latex(
     caminho_saida_latex_temp: str,
     caminho_relatorio_txt_webapp: str,
-    caminho_dados_vulnerabilidades_webapp_json: str,
-    caminho_descritivo_webapp_json: str
+    caminho_dados_vulnerabilidades_webapp_json: str, # Este será o caminho para o JSON ORIGINAL
+    caminho_descritivo_webapp_json: str # Este será o caminho para o JSON ORIGINAL
 ):
     """
     Monta o conteúdo LaTeX para o relatório de vulnerabilidades de Web Apps.
     """
     try:
         vulnerabilidades_do_txt = carregar_vulnerabilidades_do_relatorio(caminho_relatorio_txt_webapp)
+        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
         vulnerabilidades_dados_json = carregar_json_utf(caminho_dados_vulnerabilidades_webapp_json)
+        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
         descritivo_json = carregar_json_utf(caminho_descritivo_webapp_json)
 
         conteudo_latex_final = gerar_conteudo_latex_para_vulnerabilidades(
@@ -389,15 +461,17 @@ def montar_conteudo_latex(
 def montar_conteudo_latex_csv(
     caminho_saida_latex_temp: str,
     caminho_relatorio_txt_servers: str,
-    caminho_dados_vulnerabilidades_servers_json: str,
-    caminho_descritivo_servers_json: str
+    caminho_dados_vulnerabilidades_servers_json: str, # Este será o caminho para o JSON ORIGINAL
+    caminho_descritivo_servers_json: str # Este será o caminho para o JSON ORIGINAL
 ):
     """
     Monta o conteúdo LaTeX para o relatório de vulnerabilidades de Servidores (CSV).
     """
     try:
         vulnerabilidades_do_txt_csv = carregar_vulnerabilidades_do_relatorio_csv(caminho_relatorio_txt_servers)
+        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
         vulnerabilidades_dados_json = carregar_json_utf(caminho_dados_vulnerabilidades_servers_json)
+        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
         descritivo_json = carregar_json_utf(caminho_descritivo_servers_json)
 
         conteudo_latex_final = gerar_conteudo_latex_para_vulnerabilidades(
@@ -437,22 +511,6 @@ def copiar_relatorio_exemplo(caminho_relatorio_exemplo: str, caminho_saida: str)
     except Exception as e:
         print(f"Erro ao copiar a estrutura de exemplo do relatório: {e}")
 
-def escape_latex(text: str) -> str:
-    """
-    Escapes special LaTeX characters in a string.
-    """
-    text = text.replace('&', '\\&')
-    text = text.replace('%', '\\%')
-    text = text.replace('$', '\\$')
-    text = text.replace('#', '\\#')
-    text = text.replace('_', '\\_')
-    text = text.replace('{', '\\{')
-    text = text.replace('}', '\\}')
-    text = text.replace('~', '\\textasciitilde{}')
-    text = text.replace('^', '\\textasciicircum{}')
-    # REMOVA A LINHA ABAIXO:
-    # text = text.replace('\\', '\\textbackslash{}')
-    return text
 
 def substituir_placeholders(conteudo: str, substituicoes_globais: Dict[str, str]) -> str:
     """
@@ -528,7 +586,7 @@ def terminar_relatorio_preprocessado(
             r"""
             \begin{figure}[h!]
             \centering
-            \includegraphics[width=0.5\textwidth]{""" + graph_output_vm_donut + r"""}
+            \includegraphics[width=0.5\textwidth]{""" + escape_path_for_latex(graph_output_vm_donut) + r"""}
             \caption{Distribuição de Vulnerabilidades de Servidores por Severidade}
             \end{figure}
             \FloatBarrier
@@ -544,7 +602,7 @@ def terminar_relatorio_preprocessado(
             r"""
             \begin{figure}[h!]
             \centering
-            \includegraphics[width=0.5\textwidth]{""" + graph_output_webapp_donut + r"""}
+            \includegraphics[width=0.5\textwidth]{""" + escape_path_for_latex(graph_output_webapp_donut) + r"""}
             \caption{Distribuição total de vulnerabilidades por severidade}
             \end{figure}
             \FloatBarrier
@@ -586,7 +644,7 @@ def terminar_relatorio_preprocessado(
         'GRAFICO_WEBAPP_X_SITE': r"""
             \begin{figure}[h!]
             \centering
-            \includegraphics[width=1.0\textwidth]{""" + graph_output_webapp_x_site + r"""}
+            \includegraphics[width=1.0\textwidth]{""" + escape_path_for_latex(graph_output_webapp_x_site) + r"""}
             \caption{Total de vulnerabilidades por site}
             \end{figure}
             \FloatBarrier
