@@ -6,7 +6,7 @@ from pathlib import Path
 import shutil
 from bson.objectid import ObjectId
 import pandas as pd
-import traceback # Importado para printar tracebacks completos
+import traceback 
 
 # Importa a classe Config
 from ..core.config import Config
@@ -17,11 +17,11 @@ from ..data_processing.vulnerability_analyzer import processar_relatorio_csv, pr
 # Importa as funções de construção de relatório e compilação
 from ..report_generation.report_builder import terminar_relatorio_preprocessado
 from ..report_generation.latex_compiler import compilar_latex
-from ..report_generation.plot_generator import gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site, gerar_grafico_donut # AGORA IMPORTA gerar_grafico_donut
+from ..report_generation.plot_generator import gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site, gerar_grafico_donut, gerar_grafico_donut_webapp 
 
 # Inicializa a configuração e o banco de dados
-config = Config("config.json") # Configuração será carregada de config.json ou configDocker.json pelo main.py
-db = Database() # Instância do banco de dados
+config = Config("config.json") 
+db = Database() 
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
@@ -40,7 +40,7 @@ def getRelatoriosGerados():
         return jsonify(relatorios_list), 200
     except Exception as e:
         print(f"Erro ao obter relatórios gerados: {e}")
-        traceback.print_exc() # Para depuração
+        traceback.print_exc() 
         return jsonify({"error": str(e)}), 500
 
 @reports_bp.route('/deleteRelatorio/<string:relatorio_id>', methods=['DELETE'])
@@ -67,7 +67,7 @@ def deleteRelatorio(relatorio_id):
 
     except Exception as e:
         print(f"Erro ao excluir relatório {relatorio_id}: {str(e)}")
-        traceback.print_exc() # Para depuração
+        traceback.print_exc() 
         return jsonify({"error": f"Erro interno ao excluir relatório: {str(e)}"}), 500
 
 @reports_bp.route('/deleteAllRelatorios/', methods=['DELETE'])
@@ -88,11 +88,8 @@ def deleteAllRelatorios():
                 try:
                     shutil.rmtree(report_folder_path)
                     deleted_folders_count += 1
-                    # A linha original tinha um erro na variável de exceção (folder_e)
-                    # Corrigindo para um print mais genérico ou logar a exceção 'e'
-                    # ou remover este catch interno se não houver um erro específico para lidar
                     print(f"DEBUG: Pasta {report_folder_path} excluída com sucesso.") 
-                except Exception as folder_e: # Mantenho 'folder_e' para o caso de você querer usar a variável localmente
+                except Exception as folder_e: 
                     print(f"ATENÇÃO: Não foi possível excluir a pasta {report_folder_path}: {str(folder_e)}")
             else:
                 print(f"DEBUG: Pasta {report_folder_path} não encontrada ou não é um diretório.")
@@ -104,7 +101,7 @@ def deleteAllRelatorios():
 
     except Exception as e:
         print(f"Erro ao excluir todos os relatórios: {str(e)}")
-        traceback.print_exc() # Para depuração
+        traceback.print_exc() 
         return jsonify({"error": f"Erro interno ao excluir todos os relatórios: {str(e)}"}), 500
 
 @reports_bp.route('/gerarRelatorioDeLista/', methods=['POST'])
@@ -140,52 +137,42 @@ def gerarRelatorioDeLista():
 
         criado_por_vm_scan = lista_doc.get("scanStoryIdCriadoPor", "Não informado")
 
+        # Antes de qualquer coisa, defina os caminhos para salvar os gráficos no template base
+        # Estes são os caminhos "não dinâmicos" no template
+        base_report_template_path = Path(config.caminho_report_templates_base)
+        static_vm_donut_output_path = str(base_report_template_path / "assets" / "images-vmscan" / "total-vulnerabilidades-vm-donut.png")
+        static_webapp_donut_output_path = str(base_report_template_path / "assets" / "images-was" / "total-vulnerabilidades-was-donut.png")
+
+        # Inicializa o ID do novo relatório e o destino de pré-processamento
         novo_relatorio_id = db_instance.insert_one(
             "relatorios",
             {"nome": nome_secretaria, "id_lista": id_lista, "destino_relatorio_preprocessado" : None}
         ).inserted_id
 
-        pasta_destino_relatorio_temp = Path(config.caminho_shared_relatorios) / str(novo_relatorio_id) / "relatorio_preprocessado"
-        pasta_destino_relatorio_temp.mkdir(parents=True, exist_ok=True)
+        # Define a pasta temporária para arquivos intermediários do relatório
+        # NOTA: Essa pasta é diferente da pasta final RelatorioPronto, que será copiada do template
+        pasta_destino_relatorio_temp_base = Path(config.caminho_shared_relatorios) / str(novo_relatorio_id) / "relatorio_preprocessado"
+        pasta_destino_relatorio_temp_base.mkdir(parents=True, exist_ok=True)
         
-        pasta_scans_da_lista = lista_doc.get("pastas_scans_webapp")
-
         db_instance.update_one(
             "relatorios",
             {"_id": novo_relatorio_id},
-            {"destino_relatorio_preprocessado": str(pasta_destino_relatorio_temp)}
+            {"destino_relatorio_preprocessado": str(pasta_destino_relatorio_temp_base)}
         )
 
         # Processamento de WebApp Scans
-        if pasta_scans_da_lista and os.path.exists(pasta_scans_da_lista) and len(os.listdir(pasta_scans_da_lista)) > 0:
-            processar_relatorio_json(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
-            output_csv_path = str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv")
-            extrair_quantidades_vulnerabilidades_por_site(output_csv_path, pasta_scans_da_lista)
-        else:
-            print(f"Aviso: Não há scans WebApp na pasta {pasta_scans_da_lista} ou a pasta está vazia. Pulando processamento WebApp.")
-            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
-            df_empty = pd.DataFrame(columns=['Site', 'Critical', 'High', 'Medium', 'Low', 'Total'])
-            df_empty.to_csv(str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"), index=False)
-            Path(pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt").touch()
-            Path(pasta_destino_relatorio_temp / "(LATEX)Sites_agrupados_por_vulnerabilidades.txt").touch()
-
-        # Processamento de Server Scans (VM)
-        # Atenção: a variável `pasta_scans_da_lista` é usada para ambos os tipos de scans.
-        # Certifique-se de que `historyid_scanservidor` e `id_scan` apontam para os dados corretos.
-        if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan"):
-            processar_relatorio_csv(pasta_scans_da_lista, str(pasta_destino_relatorio_temp))
-        else:
-            print("Aviso: Não há scans de Servidores associados a esta lista. Pulando processamento de Servidores.")
-            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
-            Path(pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt").touch()
-            Path(pasta_destino_relatorio_temp / "(LATEX)Servidores_agrupados_por_vulnerabilidades.txt").touch()
-
-        # Leitura dos totais para o relatório final (WebApp)
-        webapp_report_txt_path = pasta_destino_relatorio_temp / "Sites_agrupados_por_vulnerabilidades.txt"
+        webapp_report_txt_path = pasta_destino_relatorio_temp_base / "Sites_agrupados_por_vulnerabilidades.txt"
         webapp_risk_counts = {'Critical': '0', 'High': '0', 'Medium': '0', 'Low': '0'}
         total_sites = '0'
         total_vulnerabilidades_web = '0'
-        if webapp_report_txt_path.exists():
+        
+        if lista_doc.get("pastas_scans_webapp") and os.path.exists(lista_doc["pastas_scans_webapp"]) and len(os.listdir(lista_doc["pastas_scans_webapp"])) > 0:
+            pasta_scans_da_lista_webapp = lista_doc["pastas_scans_webapp"]
+            # Processa e extrai dados para o relatorio TXT e CSV intermediário para WebApp
+            processar_relatorio_json(pasta_scans_da_lista_webapp, str(pasta_destino_relatorio_temp_base))
+            output_csv_path = str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv")
+            extrair_quantidades_vulnerabilidades_por_site(output_csv_path, pasta_scans_da_lista_webapp)
+            
             with open(webapp_report_txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 total_sites_match = re.search(r'Total de sites:\s*(\d+)', content)
@@ -201,18 +188,38 @@ def gerarRelatorioDeLista():
                 if high_match: webapp_risk_counts['High'] = high_match.group(1)
                 if medium_match: webapp_risk_counts['Medium'] = medium_match.group(1)
                 if low_match: webapp_risk_counts['Low'] = low_match.group(1)
-        else:
-            print(f"Aviso: Arquivo de resumo WebApp '{webapp_report_txt_path}' não encontrado. Totais WebApp serão 0.")
 
-        # Leitura dos totais para o relatório final (Servidores)
-        servers_report_txt_path = pasta_destino_relatorio_temp / "Servidores_agrupados_por_vulnerabilidades.txt"
+            # GERAR GRÁFICO DONUT WEBAPP NO DIRETÓRIO DO TEMPLATE BASE
+            webapp_risk_counts_int = {k: int(v) for k, v in webapp_risk_counts.items()}
+            if not gerar_grafico_donut_webapp(webapp_risk_counts_int, static_webapp_donut_output_path):
+                print(f"Aviso: Gráfico donut para WebApp não foi gerado (sem dados ou erro). O arquivo {static_webapp_donut_output_path} pode não existir.")
+            
+            # Gerar o gráfico de vulnerabilidades por site diretamente na pasta de destino do relatório
+            # Este gráfico é específico de cada relatório, não deve ir para o template base
+            graph_output_webapp_x_site_full_path = str(pasta_destino_relatorio_temp_base / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png")
+            gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
+                str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv"),
+                graph_output_webapp_x_site_full_path,
+                "descendente"
+            )
+            print(f"Gráfico (Vulnerabilidades por Site) salvo em: {graph_output_webapp_x_site_full_path}")
+
+        else:
+            print(f"Aviso: Não há scans WebApp na pasta {lista_doc.get('pastas_scans_webapp')} ou a pasta está vazia. Pulando processamento WebApp.")
+            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
+            pd.DataFrame(columns=['Site', 'Critical', 'High', 'Medium', 'Low', 'Total']).to_csv(str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv"), index=False)
+            webapp_report_txt_path.touch()
+            (pasta_destino_relatorio_temp_base / "(LATEX)Sites_agrupados_por_vulnerabilidades.txt").touch()
+
+        # Processamento de Server Scans (VM)
+        servers_report_txt_path = pasta_destino_relatorio_temp_base / "Servidores_agrupados_por_vulnerabilidades.txt"
         servers_risk_counts = {'critical': '0', 'high': '0', 'medium': '0', 'low': '0'}
         total_vulnerabilidade_vm = '0'
         
-        # Variável para armazenar o caminho do gráfico de donut de servidores
-        graph_output_vm_donut = "" 
-        
-        if servers_report_txt_path.exists():
+        if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan"):
+            pasta_scans_da_lista_vm = lista_doc["pastas_scans_webapp"] # Certifique-se que esta variável aponta para o diretório correto de scans VM
+            processar_relatorio_csv(pasta_scans_da_lista_vm, str(pasta_destino_relatorio_temp_base))
+            
             with open(servers_report_txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 total_vulnerabilidade_vm_match = re.search(r'Total de Vulnerabilidades:\s*(\d+)', content)
@@ -227,27 +234,22 @@ def gerarRelatorioDeLista():
                 if medium_match: servers_risk_counts['medium'] = medium_match.group(1)
                 if low_match: servers_risk_counts['low'] = low_match.group(1)
 
-            # Gerar o gráfico de donut para servidores
+            # GERAR GRÁFICO DONUT VM NO DIRETÓRIO DO TEMPLATE BASE
             vm_risk_counts_int = {k: int(v) for k, v in servers_risk_counts.items()}
-            # Define o caminho de saída para o gráfico de donut de servidores
-            pasta_final_latex = pasta_destino_relatorio_temp / "RelatorioPronto"
-            graph_output_vm_donut = str(pasta_final_latex / "assets" / "images-vmscan" / "total-vulnerabilidades-vm-donut.png") # Nome sanitizado
-            
-            # Chama a função gerar_grafico_donut para criar e salvar a imagem
-            if not gerar_grafico_donut(vm_risk_counts_int, graph_output_vm_donut):
-                print(f"Aviso: Gráfico donut para servidores não foi gerado (sem dados ou erro). O arquivo {graph_output_vm_donut} pode não existir.")
-                graph_output_vm_donut = "" # Limpa o caminho se o gráfico não foi gerado
-            else:
-                # O caminho retornado pela função plot_generator.py é absoluto, mas o LaTeX precisa relativo.
-                # O caminho que `main.tex` espera é `assets/images-vmscan/...`.
-                # O `graph_output_vm_donut` já é o caminho ABSOLUTO para o arquivo, mas o LaTeX precisa do RELATIVO
-                # a partir do `RelatorioPronto`.
-                graph_output_vm_donut = "assets/images-vmscan/total-vulnerabilidades-vm-donut.png" # Caminho relativo para o LaTeX
-                
+            if not gerar_grafico_donut(vm_risk_counts_int, static_vm_donut_output_path):
+                print(f"Aviso: Gráfico donut para servidores não foi gerado (sem dados ou erro). O arquivo {static_vm_donut_output_path} pode não existir.")
         else:
-            print("Aviso: Arquivo de resumo Servidores não encontrado. Totais Servidores serão 0 e gráfico VM não será gerado.")
-            
-        caminho_final_main_tex = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "main.tex")
+            print("Aviso: Não há scans de Servidores associados a esta lista. Pulando processamento de Servidores.")
+            servers_report_txt_path.touch()
+            (pasta_destino_relatorio_temp_base / "(LATEX)Servidores_agrupados_por_vulnerabilidades.txt").touch()
+
+        # Define a pasta final do relatório para compilação LaTeX.
+        # Esta pasta será o resultado da cópia da estrutura do template.
+        pasta_final_latex = pasta_destino_relatorio_temp_base / "RelatorioPronto" 
+
+        # Os caminhos relativos para o LaTeX são fixos, pois as imagens estarão na pasta assets copiada
+        graph_output_vm_donut_relative = "assets/images-vmscan/total-vulnerabilidades-vm-donut.png"
+        graph_output_webapp_donut_relative = "assets/images-was/total-vulnerabilidades-was-donut.png"
 
         terminar_relatorio_preprocessado(
             nome_secretaria,
@@ -256,8 +258,8 @@ def gerarRelatorioDeLista():
             data_fim,
             ano,
             mes,
-            str(pasta_destino_relatorio_temp), # Passa a pasta base dos pre-processados
-            caminho_final_main_tex, # Caminho para o main.tex final
+            str(pasta_destino_relatorio_temp_base), # Passa a pasta base dos pre-processados
+            str(pasta_final_latex / "main.tex"), # Caminho para o main.tex final
             google_drive_link,
             total_vulnerabilidades_web,
             total_vulnerabilidade_vm,
@@ -270,32 +272,12 @@ def gerarRelatorioDeLista():
             servers_risk_counts['medium'],
             servers_risk_counts['low'],
             total_sites,
-            criado_por_vm_scan, # NOVO: Passar o nome do criador do VM scan
-            graph_output_vm_donut # NOVO: Passar o caminho do gráfico de donut de servidores
-        )
-
-        graph_output_webapp = str(pasta_destino_relatorio_temp / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png") # Nome sanitizado
-        gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
-            str(pasta_destino_relatorio_temp / "vulnerabilidades_agrupadas_por_site.csv"),
-            graph_output_webapp,
-            "descendente"
+            criado_por_vm_scan, 
+            graph_output_vm_donut_relative, 
+            graph_output_webapp_donut_relative 
         )
         
-        # --- Alteração aqui: Definir pasta_final_latex corretamente antes de usá-la ---
-        # Removido os.path.join pois pasta_destino_relatorio_temp já é um Path object
-        # pasta_final_latex = str(pasta_destino_relatorio_temp / "RelatorioPronto")
-        # compilar_latex(os.path.join(pasta_final_latex, "main.tex"), pasta_final_latex)
-
-        # Correção da chamada para compilar_latex
-        # A variável pasta_final_latex foi definida dentro do IF de servers_report_txt_path.exists()
-        # Se esse IF for falso, pasta_final_latex não estaria definida para a chamada final.
-        # Para evitar isso, ou defina-a fora do IF, ou use diretamente o caminho completo aqui.
-        
-        # Caminho final da pasta de saída do LaTeX
-        final_latex_output_dir = str(pasta_destino_relatorio_temp / "RelatorioPronto")
-
-        # Chama a função de compilação LaTeX
-        compilar_latex(os.path.join(final_latex_output_dir, "main.tex"), final_latex_output_dir)
+        compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
 
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
         db_instance.close()
@@ -304,7 +286,7 @@ def gerarRelatorioDeLista():
 
     except Exception as e:
         print(f"Erro ao gerar relatório de lista: {str(e)}")
-        traceback.print_exc() # Para depuração
+        traceback.print_exc() 
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
         return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500

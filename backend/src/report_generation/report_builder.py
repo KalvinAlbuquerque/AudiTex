@@ -249,7 +249,7 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                 "Imagem": imagem,
             }
             if tipo_vulnerabilidade == "webapp":
-                item_para_agrupar["Total de URIs Afetadas"] = v.get("Total de URI Afetadas", 0)
+                item_para_agrupar["Total de URIs Afetadas"] = v.get("Total de URIs Afetadas", 0)
                 item_para_agrupar["URIs Afetadas"] = v.get("URI Afetadas", [])
             else:
                 item_para_agrupar["Total de Hosts Afetados"] = v.get("Total de Hosts Afetados", 0)
@@ -437,6 +437,21 @@ def copiar_relatorio_exemplo(caminho_relatorio_exemplo: str, caminho_saida: str)
     except Exception as e:
         print(f"Erro ao copiar a estrutura de exemplo do relatório: {e}")
 
+def escape_latex(text: str) -> str:
+    """
+    Escapes special LaTeX characters in a string.
+    """
+    text = text.replace('&', '\\&')
+    text = text.replace('%', '\\%')
+    text = text.replace('$', '\\$')
+    text = text.replace('#', '\\#')
+    text = text.replace('_', '\\_')
+    text = text.replace('{', '\\{')
+    text = text.replace('}', '\\}')
+    text = text.replace('~', '\\textasciitilde{}')
+    text = text.replace('^', '\\textasciicircum{}')
+    text = text.replace('\\', '\\textbackslash{}')
+    return text
 
 def substituir_placeholders(conteudo: str, substituicoes_globais: Dict[str, str]) -> str:
     """
@@ -468,7 +483,8 @@ def terminar_relatorio_preprocessado(
     total_vulnerabilidades_baixa_servidores: str,
     total_sites: str,
     criado_por_vm_scan: str,
-    graph_output_vm_donut: str # NOVO: Adicione este parâmetro
+    graph_output_vm_donut: str, # NOVO: Adicione este parâmetro
+    graph_output_webapp_donut: str # NOVO: Adicione este parâmetro
 ):
     """
     Finaliza o relatório LaTeX, inserindo os conteúdos preprocessados e placeholders.
@@ -519,10 +535,30 @@ def terminar_relatorio_preprocessado(
     else:
         print("Aviso: Caminho do gráfico donut de servidores não fornecido ou vazio, não será incluído no LaTeX.")
 
+    # NOVO: Placeholder para o gráfico de donut de WebApp
+    webapp_donut_graph_latex = ""
+    if graph_output_webapp_donut:
+        webapp_donut_graph_latex = (
+            r"""
+            \begin{figure}[h!]
+            \centering
+            \includegraphics[width=0.5\textwidth]{""" + graph_output_webapp_donut + r"""}
+            \caption{Distribuição total de vulnerabilidades por severidade}
+            \end{figure}
+            \FloatBarrier
+            """
+        )
+    else:
+        print("Aviso: Caminho do gráfico donut de WebApp não fornecido ou vazio, não será incluído no LaTeX.")
+
+    # Escapar caracteres especiais para LaTeX
+    nome_secretaria_escaped = escape_latex(nome_secretaria)
+    sigla_secretaria_escaped = escape_latex(sigla_secretaria)
+
 
     substituicoes_globais = {
-        'NOME SECRETARIA': nome_secretaria,
-        'SIGLA': sigla_secretaria,
+        'NOME SECRETARIA': nome_secretaria_escaped,
+        'SIGLA': sigla_secretaria_escaped,
         'INICIO DATA': inicio_data,
         'FIM DATA': fim_data,
         'MES CONCLUSAO': mes_conclusao,
@@ -544,6 +580,7 @@ def terminar_relatorio_preprocessado(
         'TOTAL_SITES': total_sites,
         'CRIADO_POR_VM_SCAN': criado_por_vm_scan,
         'GRAFICO_DONUT_SERVIDORES': vm_donut_graph_latex, 
+        'GRAFICO_DONUT_WEBAPP': webapp_donut_graph_latex, # NOVO: Placeholder para o gráfico de donut de WebApp
     }
 
     latex_editado = substituir_placeholders(

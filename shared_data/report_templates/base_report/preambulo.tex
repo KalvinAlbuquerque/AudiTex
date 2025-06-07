@@ -1,3 +1,6 @@
+% Load xcolor with 'table' option BEFORE other packages that might load it
+\usepackage[table]{xcolor} % Corrected: xcolor loaded once with [table] option.
+
 % Pacotes essenciais
 \usepackage[brazil]{babel}
 \usepackage[T1]{fontenc}
@@ -5,14 +8,12 @@
 % Pacotes para citações no estilo ABNT
 \usepackage[alf]{abntex2cite}
 
-% Pacotes adicionais
-% REMOVIDO: xcolor desta lista para evitar conflito.
+
+% Pacotes adicionais (xcolor REMOVIDO desta lista, tikz ainda está aqui, mas xcolor já foi carregado)
 \usepackage{csquotes, graphicx, comment, enumerate, multirow,
     multicol, titlesec, amsmath, amsthm, amsfonts, amssymb, dsfont,
     blindtext, ragged2e, array, enumitem, tikz, bbding, pifont, wasysym,
     titling, longtable, fancyhdr, url, float, placeins, xurl}
-
-\usepackage[table]{xcolor} % Corrigido: xcolor carregado uma única vez com a opção [table].
 
 % Configuração de margens
 \usepackage[lmargin=2cm, rmargin=2cm, tmargin=2cm, bmargin=2.5cm]{geometry}
