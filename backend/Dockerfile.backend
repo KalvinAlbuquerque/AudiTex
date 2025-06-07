@@ -1,0 +1,48 @@
+# Usa uma imagem base Python oficial com a versão que você usa
+# A versão 3.9 é uma boa escolha para compatibilidade com muitas libs
+FROM python:3.9-slim-buster
+
+# Define o diretório de trabalho dentro do contêiner
+WORKDIR /app
+
+# Copia o arquivo de requisitos para o diretório de trabalho
+# e instala as dependências antes de copiar o resto do código
+# Isso aproveita o cache de camadas do Docker
+COPY requirements.txt .
+
+# Instala as dependências do Python
+# Certifique-se de que os pacotes necessários para LaTeX (pdflatex) estejam instalados
+# O MiKTeX ou TeX Live geralmente não vêm com imagens base do Python.
+# Você precisará de uma imagem que contenha ou que possa instalar as ferramentas LaTeX.
+# Uma alternativa é usar uma imagem base que já venha com LaTeX, ou instalar manualmente.
+# Para este exemplo, vamos instalar as ferramentas básicas do TeX Live.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    texlive-full \
+    # ou uma versão mais leve se souber quais pacotes LaTeX são necessários
+    # texlive-latex-base \
+    # texlive-fonts-recommended \
+    # texlive-latex-extra \
+    # texlive-science \
+    # texlive-lang-european \
+    # ghostscript \
+    # imagemagick \ # Se precisar de manipulação de imagens avançada
+    && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copia o código da sua aplicação para o diretório de trabalho
+# O . aqui se refere ao contexto de build definido no docker-compose.yml (./backend)
+# E o src/ main.py, etc, estará dentro de /app/src
+COPY src/ /app/src/
+COPY config.json /app/config.json 
+
+# Define o comando para executar a aplicação Flask
+# Gunicorn é um servidor WSGI de produção. Para desenvolvimento, você pode usar flask run
+# Mas para consistência e pensando em produção, Gunicorn é melhor.
+# O módulo é src.main e a aplicação é 'app'
+CMD ["python", "src/main.py"] # Ou para produção: gunicorn --bind 0.0.0.0:5000 src.main:app
+
+# Expõe a porta que a aplicação Flask vai escutar
+EXPOSE 5000

@@ -1,0 +1,59 @@
+# docker-compose.yml - Configuração do ambiente de desenvolvimento para o projeto AudiTex
+
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: auditex_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped # Melhor para desenvolvimento
+
+  backend:
+    build:
+      context: ./backend # O Dockerfile para o backend está na pasta 'backend'
+      dockerfile: Dockerfile.backend # Nome explícito do Dockerfile para o backend
+    container_name: auditex_backend
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/mydatabase # Nome do serviço MongoDB
+      TENABLE_SECRET_KEY: ${TENABLE_SECRET_KEY} # Variáveis de ambiente lidas do .env
+      TENABLE_ACCESS_KEY: ${TENABLE_ACCESS_KEY} # Variáveis de ambiente lidas do .env
+    depends_on:
+      - mongodb
+    volumes:
+      # Mapeia o código-fonte do backend para hot-reloading em desenvolvimento
+      - ./backend/src:/app/src
+      # Mapeia a pasta de dados compartilhados do host para o contêiner
+      - ./shared_data:/app/shared_data
+      # Mapeia o config.json
+      - ./backend/config.json:/app/config.json
+      # Volume anônimo para node_modules, para evitar problemas de compatibilidade entre host/container
+      - /app/node_modules # Se houvesse node_modules no backend (improvável para Python puro)
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend # O Dockerfile para o frontend está na pasta 'frontend'
+      dockerfile: Dockerfile.frontend # Nome explícito do Dockerfile para o frontend
+    container_name: auditex_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://backend:5000 # Comunicação interna com o serviço 'backend'
+    depends_on:
+      - backend
+    volumes:
+      # Mapeia o código-fonte do frontend para hot-reloading em desenvolvimento
+      - ./frontend:/app
+      # Volume anônimo para node_modules para evitar problemas de compatibilidade entre host/container
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
