@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Select from 'react-select';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Correção: Garante a importação correta do CSS do Toastify
+import 'react-toastify/dist/ReactToastify.css';
 
-import { scansApi, listsApi, ScanData } from '../api/backendApi';
+import { scansApi, listsApi, ScanData } from '../api/backendApi'; // Certifique-se de que ScanData está atualizada
 
 interface SelectOption {
     value: string;
@@ -12,17 +13,15 @@ interface SelectOption {
 }
 
 function PesquisarScanWAS() {
-    const [nomeUsuario, setNomeUsuario] = useState('');
-    const [nomePasta, setNomePasta] = useState('');
-    const [scans, setScans] = useState<ScanData[]>([]);
-    const [scansSelecionados, setScansSelecionados] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [nomeLista, setNomeLista] = useState('');
+    const [scanName, setScanName] = useState('');
+    const [foundScan, setFoundScan] = useState<ScanData | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [listaSelecionada, setListaSelecionada] = useState('');
     const [listasDisponiveis, setListasDisponiveis] = useState<SelectOption[]>([]);
-    const [selectAll, setSelectAll] = useState(false);
 
-    useEffect(() => {
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
         const fetchListas = async () => {
             try {
                 const listas = await listsApi.getAllLists();
@@ -36,100 +35,121 @@ function PesquisarScanWAS() {
         fetchListas();
     }, []);
 
-    const handlePesquisa = async () => {
-        if (!nomeUsuario.trim() || !nomePasta.trim()) {
-            toast.warn('Por favor, preencha os campos de Usuário e Pasta.');
+    const handleSearchScan = async () => {
+        if (!scanName.trim()) {
+            toast.warn('Por favor, digite o nome do scan WebApp.');
             return;
         }
-        setIsLoading(true);
+        setLoading(true);
         try {
-            const fetchedScans = await scansApi.getWebAppScansFromFolder(nomeUsuario.trim(), nomePasta.trim());
-            setScans(fetchedScans);
-            setScansSelecionados([]);
-            setSelectAll(false);
-            if (fetchedScans.length === 0) {
-                toast.info('Nenhum scan encontrado com os critérios fornecidos.');
+            // Buscando todos os scans Tenable e filtrando por nome no frontend
+            const allTenableScans = await scansApi.getScansFromTenable();
+            const found = allTenableScans.find(scan => scan.name.toLowerCase() === scanName.trim().toLowerCase() && scan.type === 'was'); // Assegura que é um scan WAS
+            
+            // Se encontrou, busca os detalhes completos do scan usando o ID
+            let fullScanDetails: ScanData | null = null;
+            if (found) {
+                fullScanDetails = await listsApi.getScanDetails(found.id); // found.id é o ID numérico do scan
+            }
+
+            setFoundScan(fullScanDetails);
+
+            if (!fullScanDetails) {
+                toast.info('Nenhum scan WebApp encontrado com este nome no Tenable.');
             }
         } catch (error) {
-            console.error('Erro ao buscar scans:', error);
-            toast.error('Erro ao buscar scans. Verifique os logs.');
-            setScans([]);
+            console.error('Erro ao buscar scan WebApp:', error);
+            toast.error('Erro ao buscar scan WebApp.');
+            setFoundScan(null);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
-    const handleToggleScan = (config_id: string | undefined) => {
-        if (!config_id) return;
-        setScansSelecionados(prev => {
-            const newSelection = prev.includes(config_id)
-                ? prev.filter(id => id !== config_id)
-                : [...prev, config_id];
-            setSelectAll(newSelection.length === scans.length && scans.length > 0);
-            return newSelection;
-        });
+    const handleListaChange = (selectedOption: SelectOption | null) => {
+        setListaSelecionada(selectedOption ? selectedOption.value : '');
     };
 
-    const handleSelectAll = () => {
-        if (scans.length === 0) return;
-
-        if (selectAll) {
-            setScansSelecionados([]);
-        } else {
-            const allConfigIds = scans.map(scan => scan.config_id).filter((id): id is string => id !== undefined);
-            setScansSelecionados(allConfigIds);
-        }
-        setSelectAll(!selectAll);
-    };
-
-    const openModal = () => {
-        if (scansSelecionados.length === 0) {
-            toast.warn('Selecione pelo menos um scan para adicionar à lista.');
+    const handleDownloadScan = async () => {
+        if (!foundScan) {
+            toast.warn('Nenhum scan selecionado para download.');
             return;
         }
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setNomeLista('');
-    };
-
-    const handleAddToList = async () => {
-        if (!nomeLista.trim()) {
-            toast.warn("Por favor, digite o nome da lista.");
+        if (!listaSelecionada) {
+            toast.warn('Selecione uma lista para associar o scan WebApp.');
             return;
         }
 
-        setIsLoading(true);
+        setLoading(true);
         try {
-            const selectedScansData = {
-                items: scans.filter(scan => scan.config_id && scansSelecionados.includes(scan.config_id))
-            };
+            const listas = await listsApi.getAllLists();
+            const listaEncontrada = listas.find(lista => lista.nomeLista === listaSelecionada);
 
-            await listsApi.addWebAppScanToList(nomeLista.trim(), selectedScansData);
-            toast.success("Scans adicionados à lista com sucesso!");
-            closeModal();
-            setScansSelecionados([]);
-            setSelectAll(false);
-        } catch (error: any) {
-            console.error("Erro ao adicionar à lista:", error);
-            toast.error(error.response?.data?.error || "Erro desconhecido ao adicionar à lista.");
+            if (!listaEncontrada) {
+                toast.error('Lista selecionada não encontrada.');
+                setLoading(false);
+                return;
+            }
+
+            // O ID do scan WebApp é o 'config_id' ou 'id' dependendo de como a API do Tenable o retorna
+            // Vamos usar o 'id' aqui, que deve ser o ID numérico do scan.
+            const wasScanId = foundScan.id; // ID numérico do scan
+            const wasConfigId = foundScan.config_id; // ID da configuração do scan WAS (geralmente é o UUID)
+            const wasScanName = foundScan.name;
+            const wasScanOwner = foundScan.owner?.name || 'N/A';
+
+
+            if (!wasScanId || !wasConfigId) {
+                toast.error('Dados de ID do scan ou Config ID incompletos. Verifique os detalhes do scan.');
+                setLoading(false);
+                return;
+            }
+
+            // Chama a API do backend para baixar o CSV do scan WAS
+            // O backend espera o ID numérico do scan e o config_id (UUID)
+            // Assumindo que scansApi.downloadWASScan existe e recebe (listaId, scanIdNumerico, configId)
+            // (Se downloadWASScan não existir, ele também precisará ser adicionado em backendApi.tsx e no backend)
+            await scansApi.downloadWASScan(
+                listaEncontrada.idLista!, // ID da lista
+                wasScanId!, // ID numérico do scan WAS
+                wasConfigId! // Config ID do scan WAS (UUID)
+            );
+
+            // Adiciona ou atualiza as informações do scan WebApp na lista no banco de dados
+            // CORREÇÃO: Passando todos os 4 argumentos esperados
+            await listsApi.addWebAppScanToList(
+                listaEncontrada.nomeLista, // nomeLista
+                wasScanId!,                // idScan (usando o id numérico como o id do scan aqui)
+                wasScanName,               // nomeScan
+                wasScanOwner               // criadoPor
+            );
+
+            toast.success('Scan WebApp baixado e associado à lista com sucesso!');
+            setFoundScan(null);
+            setScanName('');
+            navigate(`/editar-lista/${listaEncontrada.idLista}`);
+        } catch (error) {
+            console.error('Erro ao baixar ou associar scan WebApp:', error);
+            toast.error('Erro ao baixar ou associar scan WebApp.');
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
+    };
+
+    // Função auxiliar para formatar timestamp
+    const formatTimestamp = (timestamp?: number) => {
+        if (!timestamp) return 'N/A';
+        const date = new Date(timestamp * 1000); // Tenable retorna Unix timestamp em segundos
+        return date.toLocaleString(); // Formata para data e hora local
     };
 
     return (
         <div
             className="min-h-screen bg-cover bg-center flex"
-            style={{
-                backgroundImage: "url('/assets/fundo.png')",
-                cursor: isLoading ? "wait" : "default",
-            }}
+            style={{ backgroundImage: "url('/assets/fundo.png')" }}
         >
-            {/* Sidebar */}
-            <div className="w-1/5 #15688f text-white flex flex-col items-center justify-center p-4 shadow-lg min-h-screen"
+            <div
+                className="w-1/5 #15688f text-white flex flex-col items-center justify-center p-4 shadow-lg min-h-screen"
             >
                 <Link to="/">
                     <img
@@ -140,144 +160,79 @@ function PesquisarScanWAS() {
                 </Link>
             </div>
 
-            {/* Main content area (right side) */}
-            {/* Alterado para h-screen para fixar a altura na viewport */}
-            <div className="w-4/5 p-8 bg-white rounded-l-lg shadow-md h-screen flex flex-col">
-                <h1 className="text-2xl font-bold mb-6 text-gray-800">Pesquisar Scans - Web App</h1>
+            <div className="w-4/5 p-8 bg-white rounded-l-lg shadow-md min-h-screen flex flex-col">
+                <h1 className="text-2xl font-bold mb-6 text-gray-800">
+                    Pesquisar Scans - Web Application
+                </h1>
 
-                {/* Search inputs and button */}
-                <div className="flex flex-col space-y-4 max-w-sm mb-6">
-                    <div>
-                        <label className="block font-semibold mb-1 text-black">Nome Usuário</label>
-                        <input
-                            type="text"
-                            className="w-full p-2 border border-gray-300 rounded text-black"
-                            id="nome-usuario"
-                            value={nomeUsuario}
-                            onChange={(e) => setNomeUsuario(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block font-semibold mb-1 text-black">Nome Pasta</label>
-                        <input
-                            type="text"
-                            className="w-full p-2 border border-gray-300 rounded text-black"
-                            id="nome-pasta"
-                            value={nomePasta}
-                            onChange={(e) => setNomePasta(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <button
-                        onClick={handlePesquisa}
-                        className="bg-[#007BB4] text-white px-4 py-2 rounded hover:bg-blue-600 w-fit cursor-pointer"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? <ClipLoader size={20} color={"#fff"} /> : "Pesquisar"}
-                    </button>
-                </div>
-
-                {/* Select All, Add to List buttons and total scans */}
-                {/* Usando mt-auto para empurrar este bloco para o final do espaço disponível, antes da lista */}
-                <div className="flex justify-between items-end mt-auto space-x-2">
-                    <button
-                        onClick={handleSelectAll}
-                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm cursor-pointer"
-                        disabled={scans.length === 0 || isLoading}
-                    >
-                        {selectAll ? "Desselecionar Todos" : "Selecionar Todos"}
-                    </button>
-                    <div className="flex flex-col items-end space-y-2">
+                <div className="flex flex-col space-y-2 max-w-md mx-auto mt-10 w-full">
+                    <label className="block font-semibold text-black">Nome do Scan</label>
+                    <input
+                        type="text"
+                        className="w-full p-2 border border-gray-300 rounded text-black"
+                        placeholder="Digite o nome do scan"
+                        value={scanName}
+                        onChange={(e) => setScanName(e.target.value)}
+                    />
+                    <div className="flex justify-center">
                         <button
-                            onClick={openModal}
-                            className="bg-[#007BB4] text-white px-4 py-2 rounded hover:bg-blue-600 text-sm cursor-pointer"
-                            disabled={scansSelecionados.length === 0 || isLoading}
+                            onClick={handleSearchScan}
+                            className="bg-[#007BB4] text-white px-6 py-2 rounded hover:bg-blue-600 cursor-pointer"
+                            disabled={loading}
                         >
-                            + Adicionar Scans Selecionados à Lista ({scansSelecionados.length})
+                            {loading ? <ClipLoader size={20} color={"#fff"} /> : "Pesquisar"}
                         </button>
-                        <span className="text-sm text-gray-700">
-                            Total de scans encontrados: {scans.length}
-                        </span>
                     </div>
                 </div>
 
-                {/* Área da lista de scans com rolagem.
-                    flex-1: faz este elemento preencher o espaço restante verticalmente.
-                    overflow-y-auto: Adiciona barra de rolagem Y apenas quando o conteúdo transborda.
-                    mt-4: Espaçamento entre o bloco de botões e a lista.
-                    p-2: Padding interno para a lista.
-                */}
-                <div className="flex-1 mt-4 bg-gray-100 rounded-lg overflow-y-auto p-2">
-                    {isLoading && scans.length === 0 ? (
-                        <div className="flex items-center justify-center h-full">
-                            <ClipLoader size={50} color={"#1a73e8"} />
+                {foundScan && (
+                    <div className="mt-6 bg-gray-100 rounded-lg overflow-y-auto p-4 flex-1" style={{minHeight: '200px'}}>
+                        <div className="space-y-2 text-gray-800">
+                            <p><strong>Nome do Scan:</strong> {foundScan.name}</p>
+                            <p><strong>ID (Numérico):</strong> {foundScan.id || 'N/A'}</p>
+                            <p><strong>Config ID:</strong> {foundScan.config_id || 'N/A'}</p>
+                            <p><strong>Proprietário:</strong> {foundScan.owner?.name || 'N/A'}</p>
+                            <p><strong>Criado em:</strong> {formatTimestamp(foundScan.created_at)}</p>
+                            <p><strong>Descrição:</strong> {foundScan.description || 'N/A'}</p>
+                            <p><strong>Alvo:</strong> {foundScan.target || 'N/A'}</p>
+                            <p><strong>Último Scan Status:</strong> {foundScan.last_scan?.status || 'N/A'}</p>
+
+
+                            <div className="mt-4">
+                                <label htmlFor="listaSelecionada" className="block text-gray-700 text-sm font-bold mb-2">
+                                    Associar a uma Lista Existente:
+                                </label>
+                                <Select<SelectOption>
+                                    id="listaSelecionada"
+                                    options={listasDisponiveis}
+                                    onChange={handleListaChange}
+                                    value={listasDisponiveis.find(option => option.value === listaSelecionada)}
+                                    placeholder="Selecione uma lista"
+                                    isClearable
+                                    isDisabled={loading}
+                                />
+                            </div>
+
+                            <div className="text-center mt-6">
+                                <button
+                                    onClick={handleDownloadScan}
+                                    className="bg-[#007BB4] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                    disabled={loading || !listaSelecionada}
+                                >
+                                    {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Baixar e Associar Scan'}
+                                </button>
+                            </div>
                         </div>
-                    ) : scans.length === 0 ? (
+                    </div>
+                )}
+                {!loading && !foundScan && (
+                    <div className="mt-4 h-[400px] bg-gray-100 rounded-lg overflow-y-auto p-4 flex-1">
                         <div className="flex items-center justify-center h-full">
                             <p className="text-center text-gray-500">Nenhum scan encontrado.</p>
                         </div>
-                    ) : (
-                        <ul className="space-y-2">
-                            {scans.map((scan) => (
-                                <li key={scan.config_id || scan.name} className="p-3 bg-white rounded shadow-sm flex items-center space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={scan.config_id ? scansSelecionados.includes(scan.config_id) : false}
-                                        onChange={() => handleToggleScan(scan.config_id)}
-                                        className="form-checkbox h-5 w-5 text-blue-600 rounded"
-                                        disabled={isLoading}
-                                    />
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-800">{scan.name}</h3>
-                                        <p className="text-gray-600">{scan.description}</p>
-                                        <p className="text-sm text-gray-500">Target: {scan.target}</p>
-                                        <p className="text-sm text-gray-500">Criado em: {new Date(scan.created_at || '').toLocaleString()}</p>
-                                        <p className="text-sm text-gray-500">Último Status: {scan.last_scan?.status}</p>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-md w-1/3 max-w-md">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-800">Adicionar Scans à Lista</h2>
-                        <label className="block font-semibold mb-1 text-black">Selecione a Lista</label>
-                        <select
-                            value={nomeLista}
-                            onChange={(e) => setNomeLista(e.target.value)}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-4"
-                            disabled={isLoading}
-                        >
-                            <option value="">Selecione uma lista</option>
-                            {listasDisponiveis.map(option => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
-                        <div className="flex justify-end space-x-4">
-                            <button
-                                onClick={closeModal}
-                                className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400 cursor-pointer"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleAddToList}
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 cursor-pointer"
-                                disabled={isLoading || !nomeLista.trim()}
-                            >
-                                {isLoading ? "Adicionando..." : "Adicionar"}
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
             <ToastContainer />
         </div>
     );

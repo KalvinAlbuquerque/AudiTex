@@ -44,9 +44,13 @@ function PesquisarScanVM() {
         }
         setLoading(true);
         try {
-            const scan = await scansApi.getVMScanByName(scanName.trim());
-            setFoundScan(scan);
-            if (!scan) {
+            // CORREÇÃO AQUI: Chamar getSavedScans e filtrar no frontend
+            const savedScans = await scansApi.getSavedScans('vm'); // Pega todos os scans VM salvos
+            const found = savedScans.find(scan => scan.name.toLowerCase() === scanName.trim().toLowerCase()); // Encontra pelo nome
+            
+            setFoundScan(found || null); // Define o scan encontrado ou null
+            
+            if (!found) {
                 toast.info('Nenhum scan VM encontrado com este nome.');
             }
         } catch (error) {
@@ -83,43 +87,10 @@ function PesquisarScanVM() {
                 return;
             }
 
-            // --- INÍCIO DA CORREÇÃO APLICADA AQUI PARA REPLICAR COMPORTAMENTO ANTERIOR ---
-            // No código antigo, 'id' do resultado recebia data.uuid, e 'id_scan' recebia data.id.
-            // Para VM scans, a API retorna um objeto com 'id' (numérico) e 'uuid'.
-            // Vamos assumir que 'foundScan.uuid' contém o UUID e 'foundScan.id' contém o ID numérico.
-            // Se foundScan.uuid for 'undefined', o scan talvez não tenha um UUID principal
-            // ou a propriedade esteja em outro lugar.
-            
-            // O debug anterior mostrou: vmScanDownloadId: 399, vmScanHistoryUuid: undefined
-            // Isso indica que foundScan.id está correto (399).
-            // E foundScan.history?.last_modification_date ou foundScan.history[x].uuid não está funcionando.
+            const vmScanNumericId: string | undefined = foundScan.id;
+            let vmScanUuid: string | undefined = foundScan.uuid;
 
-            // Com base no seu código antigo, você estava enviando:
-            // idScan: resultado?.id  (que era data.uuid)
-            // idNmr: resultado?.id_scan (que era data.id)
-
-            // Então, agora precisamos extrair:
-            // 1. O UUID do scan (para `idScan` no `listsApi.addVMScanToList`)
-            // 2. O ID numérico do scan (para `idNmr` no `listsApi.addVMScanToList` E para `idScan` no `scansApi.downloadVMScan`)
-
-            // Vamos assumir que a API para `getScanByName` retorna `foundScan.uuid` para o UUID e `foundScan.id` para o numérico.
-            // A interface ScanData já tem `id?: string;` mas não tem `uuid?: string;` diretamente.
-            // A API Tenable para `/scans` (VM) geralmente retorna ambos `id` (numérico) e `uuid`.
-            // Para ser compatível com o `ScanData` atual, vamos tentar acessar `foundScan.uuid` diretamente.
-            // Se `foundScan.uuid` não existir (pois não está na interface ou no retorno da API),
-            // isso pode ser o problema.
-
-            const vmScanNumericId: string | undefined = foundScan.id; // Este é o 'data.id' do seu código antigo
-            let vmScanUuid: string | undefined;
-
-            // Tentativa de obter o UUID do scan VM:
-            // 1. Se a API Tenable retorna 'uuid' diretamente no objeto foundScan (o que é comum para VM)
-            vmScanUuid = (foundScan as any).uuid; // Acessa como 'any' para contornar o tipo se não estiver na interface ScanData
-
-            // 2. Fallback para o histórico (se vmScanUuid ainda for undefined e houver histórico)
-            // Isso cobre o caso em que 'uuid' não está no root, mas no histórico (menos comum para o principal UUID do scan VM)
             if (!vmScanUuid && foundScan.history && foundScan.history.length > 0) {
-                // Pega o UUID do histórico mais recente
                 const latestHistory = foundScan.history.reduce((prev: any, current: any) => {
                     const prevDate = new Date(prev.last_modification_date || 0).getTime();
                     const currentDate = new Date(current.last_modification_date || 0).getTime();
@@ -132,35 +103,27 @@ function PesquisarScanVM() {
             console.log("DEBUG - vmScanNumericId (ID numérico do scan):", vmScanNumericId);
             console.log("DEBUG - vmScanUuid (UUID do scan ou histórico):", vmScanUuid);
 
-
             // Verificação final dos IDs antes de usar
             if (!vmScanNumericId || !vmScanUuid) {
                 toast.error('Dados de ID do scan ou History ID incompletos. Verifique se o scan possui um UUID principal e um histórico.');
                 setLoading(false);
                 return;
             }
-            // --- FIM DA CORREÇÃO APLICADA AQUI PARA REPLICAR COMPORTAMENTO ANTERIOR ---
-
 
             // Chama a API do backend para baixar o CSV
-            // O backend 'downloadVMScan' espera (nomeListaId, idScan, historyId)
-            // Onde 'idScan' é o ID numérico e 'historyId' é o UUID do histórico.
-            // Para replicar o comportamento, usaremos vmScanNumericId como 'idScan' e vmScanUuid como 'historyId'.
             await scansApi.downloadVMScan(
-                listaEncontrada.idLista,
-                vmScanNumericId, // Passa o ID numérico do scan
-                vmScanUuid // Passa o UUID (que funcionava como historyId no seu código antigo)
+                listaEncontrada.idLista!,
+                vmScanNumericId!, // Asserção não-nula
+                vmScanUuid! // Asserção não-nula
             );
 
             // Adiciona ou atualiza as informações do scan VM na lista no banco de dados
-            // O backend 'addVMScanToList' espera (nomeLista, idScan, nomeScan, criadoPor, idNmr)
-            // Onde 'idScan' é o UUID e 'idNmr' é o ID numérico.
             await listsApi.addVMScanToList(
                 listaEncontrada.nomeLista,
-                vmScanUuid, // UUID para 'idScan'
+                vmScanUuid!, // Asserção não-nula
                 foundScan.name,
                 foundScan.owner?.name || 'N/A',
-                vmScanNumericId // ID numérico para 'idNmr'
+                vmScanNumericId! // Asserção não-nula
             );
 
             toast.success('Scan VM baixado e associado à lista com sucesso!');
@@ -223,8 +186,8 @@ function PesquisarScanVM() {
                             <p><strong>Nome do Scan:</strong> {foundScan.name}</p>
                             <p><strong>ID (Numérico):</strong> {foundScan.id || 'N/A'}</p>
                             {/* Adicionado log para UUID principal do scan se existir */}
-                            {(foundScan as any).uuid && (
-                                <p><strong>UUID (Principal do Scan):</strong> {(foundScan as any).uuid}</p>
+                            {foundScan.uuid && (
+                                <p><strong>UUID (Principal do Scan):</strong> {foundScan.uuid}</p>
                             )}
                             {/* Adicionado log para histórico de VM */}
                             {foundScan.history && foundScan.history.length > 0 && (

@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom'; // Adicionado Link
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Importa as funções de API e interfaces do novo módulo
 import { listsApi, reportsApi } from '../api/backendApi';
 
 function GerarRelatorio() {
-    const { idLista } = useParams<{ idLista: string }>();
+    const { idLista } = useParams<{ idLista: string }>(); // idLista pode ser string | undefined
     const navigate = useNavigate();
 
     const [nomeSecretaria, setNomeSecretaria] = useState('');
     const [siglaSecretaria, setSiglaSecretaria] = useState('');
-    const [dataInicio, setDataInicio] = useState(''); // Mudar para tipo text no input
-    const [dataFim, setDataFim] = useState('');     // Mudar para tipo text no input
-    const [ano, setAno] = useState('');             // Mudar para tipo text no input
-    const [mes, setMes] = useState('');             // Mudar para tipo text no input
+    const [dataInicio, setDataInicio] = useState('');
+    const [dataFim, setDataFim] = useState('');
+    const [ano, setAno] = useState('');
+    const [mes, setMes] = useState('');
     const [linkGoogleDrive, setLinkGoogleDrive] = useState('');
     const [loading, setLoading] = useState(false);
     const [nomeListaAssociada, setNomeListaAssociada] = useState('');
@@ -29,7 +28,7 @@ function GerarRelatorio() {
 
     const fetchNomeListaAssociada = async (id: string) => {
         try {
-            const listas = await listsApi.getAllLists(); // Usa listsApi
+            const listas = await listsApi.getAllLists();
             const lista = listas.find(l => l.idLista === id);
             if (lista) {
                 setNomeListaAssociada(lista.nomeLista);
@@ -47,16 +46,24 @@ function GerarRelatorio() {
         e.preventDefault();
         setLoading(true);
 
-        // Ajustado a validação para os nomes das variáveis atuais
-        if (!nomeSecretaria.trim() || !siglaSecretaria.trim() || !dataInicio.trim() || !dataFim.trim() || !ano.trim() || !mes.trim() || !linkGoogleDrive.trim()) { // Adicionado linkGoogleDrive.trim()
+        if (!nomeSecretaria.trim() || !siglaSecretaria.trim() || !dataInicio.trim() || !dataFim.trim() || !ano.trim() || !mes.trim() || !linkGoogleDrive.trim()) {
             toast.warn('Por favor, preencha todos os campos obrigatórios.');
             setLoading(false);
             return;
         }
 
+        // Antes de criar reportData, certifique-se de que idLista não é undefined.
+        // Já que você está na rota /gerar-relatorio/:idLista, idLista sempre deve ser uma string.
+        // Podemos usar a asserção não-nulo aqui.
+        if (idLista === undefined) {
+             toast.error('ID da lista não disponível.');
+             setLoading(false);
+             return;
+        }
+
         try {
             const reportData = {
-                idLista: idLista,
+                idLista: idLista, // Usar idLista diretamente, após a verificação
                 nomeSecretaria: nomeSecretaria,
                 siglaSecretaria: siglaSecretaria,
                 dataInicio: dataInicio,
@@ -66,9 +73,9 @@ function GerarRelatorio() {
                 linkGoogleDrive: linkGoogleDrive,
             };
 
-            const relatorioId = await reportsApi.generateReportForList(reportData); // Usa reportsApi
+            const relatorioId = await reportsApi.generateReport(reportData);
             toast.success('Relatório gerado com sucesso!');
-            navigate(`/gerar-relatorio-final/${relatorioId}`); // Redireciona para a página final do relatório
+            navigate(`/gerar-relatorio-final/${relatorioId}`);
         } catch (error: any) {
             console.error('Erro ao gerar relatório:', error);
             toast.error(error.response?.data?.error || 'Erro ao gerar relatório. Verifique os logs.');
@@ -127,7 +134,7 @@ function GerarRelatorio() {
                     <div>
                         <label className="block text-black mb-1">Data de Início</label>
                         <input
-                            type="text" // Alterado de type="date" para type="text"
+                            type="text"
                             name="dataInicio"
                             value={dataInicio}
                             onChange={(e) => setDataInicio(e.target.value)}
@@ -153,7 +160,7 @@ function GerarRelatorio() {
                     <div>
                         <label className="block text-black mb-1">Data Final</label>
                         <input
-                            type="text" // Alterado de type="date" para type="text"
+                            type="text"
                             name="dataFim"
                             value={dataFim}
                             onChange={(e) => setDataFim(e.target.value)}
@@ -166,7 +173,7 @@ function GerarRelatorio() {
                     <div>
                         <label className="block text-black mb-1">Ano de Conclusão</label>
                         <input
-                            type="text" // Alterado de type="number" para type="text"
+                            type="text"
                             name="ano"
                             value={ano}
                             onChange={(e) => setAno(e.target.value)}
@@ -176,8 +183,8 @@ function GerarRelatorio() {
                         />
                     </div>
 
-                    <div className="col-span-2"> {/* span duas colunas */}
-                        <label className="block text-black mb-1">Link da pasta do Google Drive</label> {/* Removido (opcional) */}
+                    <div className="col-span-2">
+                        <label className="block text-black mb-1">Link da pasta do Google Drive</label>
                         <input
                             type="text"
                             name="linkGoogleDrive"
@@ -185,7 +192,7 @@ function GerarRelatorio() {
                             onChange={(e) => setLinkGoogleDrive(e.target.value)}
                             className="w-full p-2 border rounded text-black"
                             placeholder="https://drive.google.com/..."
-                            required 
+                            required
                         />
                     </div>
 
@@ -200,7 +207,7 @@ function GerarRelatorio() {
                     </div>
                 </form>
             </div>
-            <ToastContainer /> {/* Mantido para exibir toasts */}
+            <ToastContainer />
         </div>
     );
 }

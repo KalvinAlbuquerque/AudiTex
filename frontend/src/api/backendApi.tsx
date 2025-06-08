@@ -37,12 +37,29 @@ export interface ListData {
     relatorioGerado?: boolean;
 }
 
-export interface ScanData {
-    id: string;
-    name: string;
-    folder_path: string;
-    history_id?: string; // Opcional, para VM scans
+// Interface para itens do histórico do scan VM
+export interface HistoryItem {
+    history_id: number; // Ou string, dependendo do retorno exato do Tenable
+    uuid: string;
+    last_modification_date: number; // Timestamp Unix, ou string ISO, dependendo do retorno
+    // Outras propriedades do histórico, se necessário, como 'status', 'name'
 }
+
+export interface ScanData {
+    id: string; // ID numérico do scan (como retornado por algumas APIs do Tenable)
+    name: string;
+    folder_path?: string; // Caminho da pasta local se for um scan salvo
+    history_id?: string; // Pode ser o history_id do último histórico (se for o caso de vmScan)
+    owner?: { name: string };
+    uuid?: string; // UUID principal do scan, se disponível na raiz do objeto
+    history?: HistoryItem[]; // Array de itens de histórico
+    description?: string; // Adicionado do PesquisarScanWAS
+    target?: string; // Adicionado do PesquisarScanWAS
+    last_scan?: { status: string }; // Adicionado do PesquisarScanWAS
+    config_id?: string; // Adicionado para WebApp scans
+    created_at?: number; // Adicionado para o timestamp de criação
+}
+
 
 export interface Folder {
     name: string;
@@ -80,8 +97,8 @@ export interface LogData {
 export interface LogFilters {
     user_login?: string;
     action?: string;
-    start_date?: string; // YYYY-MM-DD
-    end_date?: string;   // YYYY-MM-DD
+    start_date?: string; //YYYY-MM-DD
+    end_date?: string;   //YYYY-MM-DD
 }
 
 // Interface para as configurações do Tenable
@@ -122,6 +139,16 @@ export const listsApi = {
         const response = await api.get(`/scans/exportScanCsv/${scanId}/${historyId}`);
         return response.data.csv_content;
     },
+    // MÉTODO PARA ADICIONAR/ATUALIZAR SCAN VM NA LISTA
+    addVMScanToList: async (nomeLista: string, idScan: string, nomeScan: string, criadoPor: string, idNmr: string): Promise<{ message: string }> => {
+        const response = await api.post('/lists/adicionarVMScanALista/', { nomeLista, idScan, nomeScan, criadoPor, idNmr });
+        return response.data;
+    },
+    // MÉTODO PARA ADICIONAR/ATUALIZAR SCAN WebApp NA LISTA
+    addWebAppScanToList: async (nomeLista: string, idScan: string, nomeScan: string, criadoPor: string): Promise<{ message: string }> => {
+        const response = await api.post('/lists/adicionarWebAppScanALista/', { nomeLista, idScan, nomeScan, criadoPor });
+        return response.data;
+    },
 };
 
 export const scansApi = {
@@ -140,6 +167,30 @@ export const scansApi = {
     deleteScanFromDirectory: async (scanType: 'was' | 'vm', scanName: string): Promise<{ message: string }> => {
         const response = await api.delete(`/scans/deleteScanFromDirectory/${scanType}/${scanName}`);
         return response.data;
+    },
+    downloadVMScan: async (nomeListaId: string, idScan: string, historyId: string): Promise<void> => {
+        const response = await api.post('/scans/vm/downloadscans/', { nomeListaId, idScan, historyId }, { responseType: 'blob' });
+        // Lógica de download de arquivo aqui se a resposta for um blob
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `vm_scan_report_${idScan}_${historyId}.csv`); // Nome sugerido para download
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    },
+    // NOVO MÉTODO: Para baixar scan WebApp diretamente
+    downloadWASScan: async (nomeListaId: string, idScan: string, configId: string): Promise<void> => {
+        const response = await api.post('/scans/was/downloadscans/', { nomeListaId, idScan, configId }, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `was_scan_report_${idScan}_${configId}.csv`); // Nome sugerido para download
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url);
     },
 };
 

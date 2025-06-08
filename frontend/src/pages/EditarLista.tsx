@@ -1,7 +1,7 @@
 import  { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 // Removido o import de listsApi
-// import { listsApi, scansApi, Lista, ScanData } from '../api/backendApi'; 
+// import { listsApi, scansApi, Lista, ScanData } from '../api/backendApi'; // ESTA LINHA ESTÁ COMENTADA E NÃO CAUSA O ERRO
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -10,7 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios'; 
 
 // Importa apenas o necessário do backendApi.ts para tipagem
-import { ScanData, Lista } from '../api/backendApi'; 
+import {  ListData, ScanData } from '../api/backendApi'; // A importação de ListData está correta
 
 function EditarLista() {
     const { idLista } = useParams<{ idLista: string }>();
@@ -36,8 +36,10 @@ function EditarLista() {
         try {
             // CORREÇÃO TEMPORÁRIA: Chamada direta para lists/getTodasAsListas
             const response = await axios.get(`${API_BASE_URL}/lists/getTodasAsListas/`); 
-            const listas: Lista[] = response.data; // Assumimos que o backend retorna uma lista de Listas
-            const lista = listas.find((l: Lista) => l.idLista === idLista); // Acessa diretamente
+            // CORREÇÃO AQUI: Alterado 'Lista[]' para 'ListData[]'
+            const listas: ListData[] = response.data; // Assumimos que o backend retorna uma lista de Listas
+            // CORREÇÃO AQUI: Alterado '(l: Lista)' para '(l: ListData)'
+            const lista = listas.find((l: ListData) => l.idLista === idLista); // Acessa diretamente
 
             if (lista) {
                 setNomeLista(lista.nomeLista);

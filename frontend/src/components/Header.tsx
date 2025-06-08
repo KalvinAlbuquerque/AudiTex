@@ -1,5 +1,5 @@
 // frontend/src/components/Header.tsx
-import { useState } from 'react';
+import  { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { toast } from 'react-toastify';
@@ -15,6 +15,11 @@ function Header() {
         navigate('/login');
     };
 
+    // Removemos handleCloseMenu se não for mais necessário para o onMouseLeave
+    // const handleCloseMenu = () => {
+    //     setIsMenuOpen(false);
+    // };
+
     const headerBgStyle = {
         backgroundImage: "url('/assets/fundo.png')",
         backgroundSize: 'cover',
@@ -25,7 +30,7 @@ function Header() {
 
     return (
         <header
-            className="p-4 flex items-center justify-between fixed top-0 w-full z-50" // Adicionado 'fixed top-0 w-full z-50'
+            className="p-4 flex items-center justify-between fixed top-0 w-full z-50"
             style={headerBgStyle}
         >
             <div className="flex items-center space-x-4">
@@ -61,9 +66,13 @@ function Header() {
                             </li>
 
                             {/* Menu suspenso para Configurações e Logout */}
-                            <li className="relative">
+                            <li
+                                className="relative"
+                                // Removido onMouseLeave aqui para que ele não suma ao tirar o mouse
+                                // onMouseLeave={handleCloseMenu}
+                            >
                                 <button
-                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                    onClick={() => setIsMenuOpen(!isMenuOpen)} // Mantém o clique para alternar
                                     className={`${textColorClass} ${linkHoverClass} transition duration-300 ease-in-out flex items-center`}
                                 >
                                     Configurações
@@ -78,7 +87,7 @@ function Header() {
                                             <>
                                                 <li>
                                                     <button
-                                                        onClick={() => { navigate('/gerenciar-usuarios'); setIsMenuOpen(false); }}
+                                                        onClick={() => { navigate('/gerenciar-usuarios'); setIsMenuOpen(false); }} // Fechar ao navegar
                                                         className="block w-full text-left px-4 py-2 text-white hover:bg-gray-700"
                                                     >
                                                         Gerenciar Usuários
@@ -86,7 +95,7 @@ function Header() {
                                                 </li>
                                                 <li>
                                                     <button
-                                                        onClick={() => { navigate('/ver-logs'); setIsMenuOpen(false); }}
+                                                        onClick={() => { navigate('/ver-logs'); setIsMenuOpen(false); }} // Fechar ao navegar
                                                         className="block w-full text-left px-4 py-2 text-white hover:bg-gray-700"
                                                     >
                                                         Ver Logs
@@ -94,7 +103,7 @@ function Header() {
                                                 </li>
                                                 <li>
                                                     <button
-                                                        onClick={() => { navigate('/configuracoes-tenable'); setIsMenuOpen(false); }}
+                                                        onClick={() => { navigate('/configuracoes-tenable'); setIsMenuOpen(false); }} // Fechar ao navegar
                                                         className="block w-full text-left px-4 py-2 text-white hover:bg-gray-700"
                                                     >
                                                         Config. Tenable
@@ -102,7 +111,7 @@ function Header() {
                                                 </li>
                                                 <li>
                                                     <button
-                                                        onClick={() => { navigate('/gerenciar-vulnerabilidades'); setIsMenuOpen(false); }}
+                                                        onClick={() => { navigate('/gerenciar-vulnerabilidades'); setIsMenuOpen(false); }} // Fechar ao navegar
                                                         className="block w-full text-left px-4 py-2 text-white hover:bg-gray-700"
                                                     >
                                                         Gerenciar Vulnerabilidades
@@ -112,7 +121,7 @@ function Header() {
                                         )}
                                         <li>
                                             <button
-                                                onClick={handleLogout}
+                                                onClick={handleLogout} // handleLogout já navega, o que fecha o menu
                                                 className="block w-full text-left px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-b-md mt-1"
                                             >
                                                 Logout ({user.login})

@@ -1,183 +1,192 @@
-// frontend/src/pages/RelatoriosGerados.tsx
 import  { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import ConfirmDeleteModal from '../pages/ConfirmDeleteModal';
-import MissingVulnerabilitiesModal from '../pages/MissingVulnerabilitiesModal'; // Certifique-se de que está importado
-import { reportsApi, ReportGenerated } from '../api/backendApi'; // Importe ReportGenerated
+import { reportsApi, ReportGenerated } from '../api/backendApi'; // Importa a interface ReportGenerated
+import ConfirmDeleteModal from './ConfirmDeleteModal'; // Certifique-se do caminho correto
+import MissingVulnerabilitiesModal from './MissingVulnerabilitiesModal'; // Certifique-se do caminho correto
 
 function RelatoriosGerados() {
-    const [reports, setReports] = useState<ReportGenerated[]>([]);
+    const [relatorios, setRelatorios] = useState<ReportGenerated[]>([]);
     const [loading, setLoading] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [reportToDeleteId, setReportToDeleteId] = useState<string | null>(null);
-    const [reportToDeleteName, setReportToDeleteName] = useState<string | null>(null);
+    const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
+    // Estados para o modal de vulnerabilidades ausentes
     const [showMissingVulnerabilitiesModal, setShowMissingVulnerabilitiesModal] = useState(false);
-    const [selectedReportIdForModal, setSelectedReportIdForModal] = useState<string | null>(null);
-    const [missingVulnerabilitiesType, setMissingVulnerabilitiesType] = useState<'webapp' | 'servers' | null>(null);
+    const [currentReportIdForModal, setCurrentReportIdForModal] = useState<string>('');
+    const [currentTypeForModal, setCurrentTypeForModal] = useState<'webapp' | 'servers'>('webapp');
+    const [modalTitle, setModalTitle] = useState('');
 
 
     useEffect(() => {
-        fetchReports();
+        fetchRelatorios();
     }, []);
 
-    const fetchReports = async () => {
+    const fetchRelatorios = async () => {
         setLoading(true);
         try {
             const data = await reportsApi.getGeneratedReports();
-            setReports(data);
+            setRelatorios(data);
         } catch (error) {
-            console.error('Erro ao buscar relatórios:', error);
+            console.error('Erro ao buscar relatórios gerados:', error);
             toast.error('Erro ao buscar relatórios gerados.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDownloadReport = async (reportId: string) => {
-        setLoading(true);
-        try {
-            await reportsApi.downloadReportPdf(reportId);
-            toast.success('Download iniciado!');
-        } catch (error: any) {
-            console.error('Erro ao baixar relatório:', error);
-            toast.error(error.response?.data?.error || 'Erro ao baixar relatório.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDeleteClick = (reportId: string, reportName: string) => {
-        setReportToDeleteId(reportId);
-        setReportToDeleteName(reportName);
+    const confirmDelete = (id: string) => {
+        setReportToDelete(id);
         setShowDeleteModal(true);
     };
 
-    const handleConfirmDelete = async () => {
-        if (!reportToDeleteId) return;
+    const handleDeleteReport = async () => {
+        if (!reportToDelete) return;
 
         setLoading(true);
         try {
-            const response = await reportsApi.deleteReport(reportToDeleteId);
-            toast.success(response.message || 'Relatório excluído com sucesso!');
-            fetchReports(); // Recarregar a lista
-        } catch (error: any) {
+            await reportsApi.deleteReport(reportToDelete);
+            toast.success('Relatório excluído com sucesso!');
+            fetchRelatorios(); // Atualiza a lista
+        } catch (error) {
             console.error('Erro ao excluir relatório:', error);
-            toast.error(error.response?.data?.error || 'Erro ao excluir relatório.');
+            toast.error('Erro ao excluir relatório.');
         } finally {
             setLoading(false);
             setShowDeleteModal(false);
-            setReportToDeleteId(null);
-            setReportToDeleteName(null);
+            setReportToDelete(null);
         }
     };
 
-    const handleCancelDelete = () => {
-        setShowDeleteModal(false);
-        setReportToDeleteId(null);
-        setReportToDeleteName(null);
+    const handleDownloadPdf = async (reportId: string) => {
+        setLoading(true);
+        try {
+            await reportsApi.downloadReportPdf(reportId);
+            toast.success('Download do PDF iniciado!');
+        } catch (error) {
+            console.error('Erro ao baixar o PDF:', error);
+            toast.error('Erro ao baixar o PDF.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleShowMissingVulnerabilities = (reportId: string, type: 'webapp' | 'servers') => {
-        setSelectedReportIdForModal(reportId);
-        setMissingVulnerabilitiesType(type);
+    // Função para abrir o modal de vulnerabilidades ausentes
+    const handleOpenMissingVulnerabilitiesModal = (reportId: string, type: 'webapp' | 'servers') => {
+        setCurrentReportIdForModal(reportId);
+        setCurrentTypeForModal(type);
+        setModalTitle(`Vulnerabilidades Não Encontradas - ${type === 'webapp' ? 'Web Application' : 'Servers'}`);
         setShowMissingVulnerabilitiesModal(true);
     };
 
-    return (
-        <div className="min-h-screen bg-white p-8 flex flex-col rounded-lg">
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">Relatórios Gerados</h1>
+    const handleCloseMissingVulnerabilitiesModal = () => {
+        setShowMissingVulnerabilitiesModal(false);
+        setCurrentReportIdForModal(''); // Limpa o ID ao fechar
+    };
 
-            <div className="flex justify-end mb-4">
-                <button
-                    onClick={() => handleDeleteClick(reports.map(r => r.id).join(','), "todos")} // Apenas como exemplo, se fosse para apagar todos
-                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 cursor-pointer"
-                    disabled={reports.length === 0 || loading}
-                >
-                    Excluir Todos os Relatórios
-                </button>
+
+    return (
+        <div
+            className="min-h-screen bg-cover bg-center flex flex-col items-center p-8"
+            style={{ backgroundImage: "url('/assets/fundo.png')" }}
+        >
+            <div className="bg-white p-8 rounded-lg shadow-xl max-w-4xl w-full">
+                <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Relatórios Gerados</h1>
+
+                <div className="mb-6 flex justify-end">
+                    <Link
+                        to="/gerar-relatorio"
+                        className="bg-[#007BB4] text-white px-5 py-2 rounded-lg shadow-md hover:bg-[#009BE2] transition duration-300 ease-in-out flex items-center"
+                    >
+                        Gerar Novo Relatório
+                        <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </Link>
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center items-center h-40">
+                        <ClipLoader size={50} color={"#123abc"} />
+                    </div>
+                ) : relatorios.length === 0 ? (
+                    <p className="text-gray-700 text-center">Nenhum relatório gerado ainda.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                            <thead className="bg-gray-200">
+                                <tr>
+                                    <th className="py-3 px-4 border-b text-left text-gray-700">Nome da Lista</th>
+                                    <th className="py-3 px-4 border-b text-left text-gray-700">Secretaria</th>
+                                    <th className="py-3 px-4 border-b text-left text-gray-700">Data Geração</th>
+                                    <th className="py-3 px-4 border-b text-left text-gray-700">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {relatorios.map((relatorio) => (
+                                    <tr key={relatorio.id} className="hover:bg-gray-50">
+                                        <td className="py-3 px-4 border-b text-gray-800">{relatorio.nome}</td>
+                                        <td className="py-3 px-4 border-b text-gray-800">{relatorio.sigla}</td>
+                                        <td className="py-3 px-4 border-b text-gray-800">{new Date(relatorio.dataGeracao).toLocaleString()}</td>
+                                        <td className="py-3 px-4 border-b">
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => handleDownloadPdf(relatorio.id)}
+                                                    className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition duration-200"
+                                                    title="Baixar PDF"
+                                                >
+                                                    PDF
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenMissingVulnerabilitiesModal(relatorio.id, 'webapp')}
+                                                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition duration-200"
+                                                    title="Ver Vulnerabilidades WebApp Ausentes"
+                                                >
+                                                    WAS V.
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenMissingVulnerabilitiesModal(relatorio.id, 'servers')}
+                                                    className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition duration-200"
+                                                    title="Ver Vulnerabilidades Servers Ausentes"
+                                                >
+                                                    VM V.
+                                                </button>
+                                                <button
+                                                    onClick={() => confirmDelete(relatorio.id)}
+                                                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition duration-200"
+                                                    title="Excluir Relatório"
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
-            {loading && reports.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center h-full">
-                    <ClipLoader size={50} color={"#1a73e8"} />
-                </div>
-            ) : reports.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center h-full">
-                    <p className="text-gray-500 text-center">Nenhum relatório gerado encontrado.</p>
-                </div>
-            ) : (
-                <div className="bg-gray-100 flex-1 rounded-lg p-4 overflow-y-auto">
-                    <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
-                        <thead>
-                            <tr className="bg-[#007BB4] text-white">
-                                <th className="py-2 px-4 text-left">Nome da Secretaria</th>
-                                <th className="py-2 px-4 text-left">Sigla</th>
-                                <th className="py-2 px-4 text-left">Data de Geração</th>
-                                <th className="py-2 px-4 text-left">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reports.map((report) => (
-                                <tr key={report.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                    <td className="py-2 px-4 text-gray-800">{report.nome}</td>
-                                    <td className="py-2 px-4 text-gray-800">{report.sigla || 'N/A'}</td>
-                                    <td className="py-2 px-4 text-gray-800">
-                                        {report.dataGeracao ? new Date(report.dataGeracao).toLocaleString('pt-BR') : 'N/A'}
-                                    </td>
-                                    <td className="py-2 px-4 text-gray-800">
-                                        <button
-                                            onClick={() => handleDownloadReport(report.id)}
-                                            className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 mr-2"
-                                        >
-                                            Download PDF
-                                        </button>
-                                        <button
-                                            onClick={() => handleShowMissingVulnerabilities(report.id, 'webapp')} 
-                                            className="bg-purple-500 text-white px-3 py-1 rounded-lg hover:bg-purple-600 mr-2"
-                                        >
-                                            Ver Vulns WebApp Ausentes
-                                        </button>
-                                        <button
-                                            onClick={() => handleShowMissingVulnerabilities(report.id, 'servers')}
-                                            className="bg-orange-500 text-white px-3 py-1 rounded-lg hover:bg-orange-600"
-                                        >
-                                            Ver Vulns Servidores Ausentes
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteClick(report.id, report.nome)}
-                                            className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 ml-2"
-                                        >
-                                            Excluir
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <ConfirmDeleteModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDeleteReport}
+                message="Tem certeza que deseja excluir este relatório? Esta ação é irreversível."
+            />
 
-            {showDeleteModal && reportToDeleteId && (
-                <ConfirmDeleteModal
-                    isOpen={showDeleteModal}
-                    onClose={handleCancelDelete}
-                    onConfirm={handleConfirmDelete}
-                    message={`Tem certeza que deseja excluir o relatório "${reportToDeleteName}"? Esta ação é irreversível.`}
-                />
-            )}
+            {/* Correção do Erro 3: Passando as novas props 'reportId' e 'type', e removendo 'vulnerabilities' */}
+            <MissingVulnerabilitiesModal
+                isOpen={showMissingVulnerabilitiesModal}
+                onClose={handleCloseMissingVulnerabilitiesModal}
+                title={modalTitle}
+                reportId={currentReportIdForModal}
+                type={currentTypeForModal}
+            />
 
-            {showMissingVulnerabilitiesModal && selectedReportIdForModal && missingVulnerabilitiesType && (
-                <MissingVulnerabilitiesModal
-                    isOpen={showMissingVulnerabilitiesModal}
-                    onClose={() => setShowMissingVulnerabilitiesModal(false)}
-                    reportId={selectedReportIdForModal}
-                    type={missingVulnerabilitiesType}
-                />
-            )}
             <ToastContainer />
         </div>
     );

@@ -24,7 +24,7 @@ config = Config("config.json")
 # Removido: global tenable_api # Não é mais necessário
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"], supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}}, supports_credentials=True) # ou use uma lista se tiver mais origens
 app.register_blueprint(scans_bp)
 app.register_blueprint(lists_bp)
 app.register_blueprint(reports_bp)
