@@ -1,7 +1,7 @@
 # backend/src/routes/auth.py
 
 from flask import Blueprint, request, jsonify
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from ..core.database import Database
 from ..models.user import User
 from bson.objectid import ObjectId
@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
-CORS(auth_bp)
+CORS(auth_bp, supports_credentials=True)
 
 db_instance = Database()
 
