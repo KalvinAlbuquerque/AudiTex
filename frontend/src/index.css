@@ -1,8 +1,13 @@
+/* frontend/src/index.css */
 @import "tailwindcss";
 
 html, body {
   font-family: 'Source Sans Pro', 'sans-serif';
   background-color: #141723;
+  height: 100%; /* Garante que html e body ocupam 100% da altura da viewport */
+  overflow: hidden; /* Impede a rolagem principal da página */
+  margin: 0;
+  padding: 0;
 }
 
 /* Estilização da barra de rolagem para navegadores Webkit (Chrome, Safari, Edge) */
