@@ -23,6 +23,7 @@ import AuthGuard from './components/AuthGuard.tsx';
 import Layout from './components/Layout.tsx'; // NOVO: Importe o componente Layout
 import { useAuth } from './context/AuthContext.tsx';
 import VerLogs from './pages/VerLogs.tsx';
+import ConfiguracoesTenable from './pages/ConfiguracoesTenable.tsx';
 
 function App() {
     const { user } = useAuth();
@@ -61,6 +62,10 @@ function App() {
                 <Route
                     path="/ver-logs"
                     element={<AuthGuard allowedProfiles={['Administrator']}><Layout><VerLogs /></Layout></AuthGuard>}
+                />
+                <Route
+                    path="/configuracoes-tenable"
+                    element={<AuthGuard allowedProfiles={['Administrator']}><Layout><ConfiguracoesTenable /></Layout></AuthGuard>}
                 />
             </Routes>
         </Router>

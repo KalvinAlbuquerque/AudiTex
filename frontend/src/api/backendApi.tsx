@@ -1,63 +1,63 @@
+// frontend/src/api/backendApi.tsx
+
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_REACT_APP_API_URL;
-
-if (!API_URL) {
-    console.error('VITE_REACT_APP_API_URL não está definido nas variáveis de ambiente.');
-}
-
+// Cria uma instância do Axios com a base URL do backend
 const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    // Definir um timeout geral para todas as requisições se desejar, mas vamos focar na específica
-    // timeout: 30000, // Exemplo: 30 segundos
+    baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:5000',
+    withCredentials: true, // Importante para permitir o envio de cookies de sessão/credenciais
 });
 
-export interface Lista {
-    idLista: string;
+// Interceptor para adicionar o token JWT (se você implementar JWT futuramente)
+// api.interceptors.request.use(
+//     (config) => {
+//         const user = localStorage.getItem('auditex_user');
+//         if (user) {
+//             const parsedUser = JSON.parse(user);
+//             if (parsedUser.token) {
+//                 config.headers.Authorization = `Bearer ${parsedUser.token}`;
+//             }
+//         }
+//         return config;
+//     },
+//     (error) => {
+//         return Promise.reject(error);
+//     }
+// );
+
+
+// --- Interfaces de Dados ---
+export interface ListData {
+    idLista?: string;
     nomeLista: string;
+    pastas_scans_webapp?: string;
+    pastas_scans_vm?: string; // Alterado para vm de servers
+    id_scan?: string;
+    historyid_scanservidor?: string; // history_id
     relatorioGerado?: boolean;
 }
 
 export interface ScanData {
-    config_id?: string; // Propriedade de WAS Scan
+    id: string;
     name: string;
-    target?: string; // Propriedade de WAS Scan
-    description?: string;
-    created_at?: string; // Propriedade de WAS Scan
-    last_scan?: { // Propriedade de WAS Scan (última varredura)
-        scan_id?: string;
-        uuid?: string;
-        status?: string;
-    };
-    owner_id?: string; // Propriedade de WAS Scan
-    owner?: { name: string };
-    id?: string; // Propriedade de VM Scan (ID numérico principal)
-    last_modification_date?: string; // Propriedade comum (pode vir de WAS ou VM)
-    
-    // --- INÍCIO DA CORREÇÃO APLICADA AQUI: Adicionando a propriedade 'history' ---
-    history?: Array<{ // Propriedade específica de VM Scan (histórico de execuções)
-        uuid: string; // O UUID do histórico de scan, usado para download
-        scan_id?: string; // ID do scan dentro do histórico (pode ser o mesmo que o 'id' principal)
-        status?: string; // Status da execução do histórico
-        last_modification_date?: string; // Data de modificação do histórico (para encontrar o mais recente)
-        // Adicione outras propriedades do objeto 'history' se forem relevantes
-    }>;
-    // --- FIM DA CORREÇÃO APLICADA AQUI ---
+    folder_path: string;
+    history_id?: string; // Opcional, para VM scans
 }
 
 export interface Folder {
-    id: string;
     name: string;
+    path: string;
+    is_empty: boolean;
 }
 
 export interface ReportGenerated {
-    id: string;
     nome: string;
+    id: string;
+    sigla: string; // Adicionado para relatorios gerados
+    dataGeracao: string; // Adicionado para relatorios gerados
 }
 
+// Interface para dados do usuário
 export interface UserData {
     _id?: string; // Opcional, pois é gerado pelo MongoDB
     login: string;
@@ -67,171 +67,155 @@ export interface UserData {
     profile: 'User' | 'Administrator';
 }
 
+// Interface para dados de Log
 export interface LogData {
     id: string;
     action: string;
     user_login: string;
-    details: any; // Pode ser qualquer objeto
+    details: any;
     timestamp: string; // Formato ISO string
 }
 
+// Interface para os filtros de log
+export interface LogFilters {
+    user_login?: string;
+    action?: string;
+    start_date?: string; // YYYY-MM-DD
+    end_date?: string;   // YYYY-MM-DD
+}
+
+// Interface para as configurações do Tenable
+export interface TenableConfigStatus {
+    configured: boolean;
+    last_updated?: string; // Data da última atualização (opcional)
+}
+
+
+// --- Objetos de API para cada funcionalidade ---
+
 export const listsApi = {
-    getAllLists: async (): Promise<Lista[]> => {
-        const response = await api.get('/lists/getTodasAsListas/');
+    getAllLists: async (): Promise<ListData[]> => {
+        const response = await api.get('/lists/getLists/');
         return response.data;
     },
-
     createList: async (nomeLista: string): Promise<{ message: string; idLista: string }> => {
-        const response = await api.post('/lists/criarLista/', { nomeLista });
+        const response = await api.post('/lists/createList/', { nomeLista });
         return response.data;
     },
-
-    editListName: async (id: string, novoNome: string): Promise<{ message: string }> => {
-        const response = await api.post('/lists/editarNomeLista/', { id, novoNome });
+    updateList: async (idLista: string, nomeLista: string, pastas_scans_webapp?: string, pastas_scans_vm?: string, id_scan?: string, historyid_scanservidor?: string): Promise<{ message: string }> => {
+        const response = await api.put(`/lists/updateList/${idLista}`, { nomeLista, pastas_scans_webapp, pastas_scans_vm, id_scan, historyid_scanservidor });
         return response.data;
     },
-
     deleteList: async (idLista: string): Promise<{ message: string }> => {
-        const response = await api.post('/lists/excluirLista/', { idLista });
+        const response = await api.delete(`/lists/deleteList/${idLista}`);
         return response.data;
     },
-
-    getWebAppScansFromList: async (nomeLista: string): Promise<string[]> => {
-        const response = await api.post('/lists/getScansDeLista/', { nomeLista });
+    getFolders: async (scanType: 'was' | 'vm'): Promise<Folder[]> => {
+        const response = await api.get(`/lists/getFolders/${scanType}`);
         return response.data;
     },
-
-    addWebAppScanToList: async (nomeLista: string, scans: { items: ScanData[] }): Promise<{ message: string }> => {
-        // Aumentando o timeout para 5 minutos (300000 ms) para esta operação
-        const response = await api.post('/lists/adicionarWAPPScanALista/', { nomeLista, scans }, { timeout: 300000 });
+    getScanDetails: async (scanId: string): Promise<any> => { // Adicionado para buscar detalhes do scan
+        const response = await api.get(`/scans/getScanDetails/${scanId}`);
         return response.data;
     },
-
-    clearWebAppScansFromList: async (nomeLista: string): Promise<{ message: string }> => {
-        const response = await api.post('/lists/limparScansDeLista/', { nomeLista });
-        return response.data;
-    },
-
-    getVMScanFromList: async (nomeLista: string): Promise<[string, string] | null> => {
-        try {
-            const response = await api.post('/lists/getVMScansDeLista/', { nomeLista });
-            return response.data;
-        } catch (error: any) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-                return null;
-            }
-            throw error;
-        }
-    },
-
-    addVMScanToList: async (nomeLista: string, idScan: string, nomeScan: string, criadoPor: string, idNmr: string): Promise<{ message: string }> => {
-        const response = await api.post('/lists/adicionarVMScanALista/', { nomeLista, idScan, nomeScan, criadoPor, idNmr });
-        return response.data;
-    },
-
-    clearVMScanFromList: async (nomeLista: string): Promise<{ message: string }> => {
-        const response = await api.post('/lists/limparVMScansDeLista/', { nomeLista });
-        return response.data;
+    exportScanCsv: async (scanId: string, historyId: string): Promise<string> => { // Adicionado para exportar CSV
+        const response = await api.get(`/scans/exportScanCsv/${scanId}/${historyId}`);
+        return response.data.csv_content;
     },
 };
 
 export const scansApi = {
-    getWebAppScansFromFolder: async (nomeUsuario: string, nomePasta: string): Promise<ScanData[]> => {
-        const response = await api.post('/scans/webapp/scansfromfolderofuser/', { nomeUsuario, nomePasta });
-        return response.data.items;
+    getScansFromTenable: async (): Promise<any[]> => {
+        const response = await api.get('/scans/getScansFromTenable');
+        return response.data.scans; // Assuming the backend returns an object with a 'scans' key
     },
-
-    downloadWebAppScans: async (scans: { items: ScanData[] }, usuario: string, nomePasta: string): Promise<{ message: string }> => {
-        const response = await api.post('/scans/webapp/downloadscans/', { scans, usuario, nomePasta });
+    getSavedScans: async (scanType: 'was' | 'vm'): Promise<ScanData[]> => {
+        const response = await api.get(`/scans/getSavedScans/${scanType}`);
         return response.data;
     },
-
-    getVMScanByName: async (name: string): Promise<ScanData | null> => {
-        try {
-            const response = await api.post('/scans/vm/getScanByName/', { name });
-            return response.data;
-        } catch (error: any) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-                return null;
-            }
-            throw error;
-        }
+    saveScanToDirectory: async (scanId: string, scanName: string, scanType: 'was' | 'vm', history_id?: string): Promise<{ message: string }> => {
+        const response = await api.post('/scans/saveScanToDirectory', { scanId, scanName, scanType, history_id });
+        return response.data;
     },
-
-    downloadVMScan: async (nomeListaId: string, idScan: string, historyId: string): Promise<{ message: string }> => {
-        const response = await api.post('/scans/vm/downloadscans/', { nomeListaId, idScan, historyId });
+    deleteScanFromDirectory: async (scanType: 'was' | 'vm', scanName: string): Promise<{ message: string }> => {
+        const response = await api.delete(`/scans/deleteScanFromDirectory/${scanType}/${scanName}`);
         return response.data;
     },
 };
 
 export const reportsApi = {
+    generateReport: async (reportData: {
+        idLista: string;
+        nomeSecretaria: string;
+        siglaSecretaria: string;
+        dataInicio: string;
+        dataFim: string;
+        ano: string;
+        mes: string;
+        linkGoogleDrive: string;
+    }): Promise<string> => {
+        const response = await api.post('/reports/gerarRelatorioDeLista/', reportData);
+        return response.data; // Deve retornar o ID do relatório
+    },
     getGeneratedReports: async (): Promise<ReportGenerated[]> => {
         const response = await api.get('/reports/getRelatoriosGerados/');
         return response.data;
     },
-
-    deleteReport: async (relatorio_id: string): Promise<{ message: string }> => {
-        const response = await api.delete(`/reports/deleteRelatorio/${relatorio_id}`);
+    downloadReportPdf: async (reportId: string): Promise<void> => {
+        const response = await api.post('/reports/baixarRelatorioPdf/', { idRelatorio: reportId }, { responseType: 'blob' });
+        // CORRIGIDO: Passa response.data diretamente, pois já é um Blob
+        const url = window.URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Relatorio_Auditoria_${reportId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode?.removeChild(link);
+        window.URL.revokeObjectURL(url); // Importante para liberar recursos
+    },
+    deleteReport: async (reportId: string): Promise<{ message: string }> => {
+        const response = await api.delete(`/reports/deleteRelatorio/${reportId}`);
         return response.data;
     },
-
     deleteAllReports: async (): Promise<{ message: string }> => {
         const response = await api.delete('/reports/deleteAllRelatorios/');
         return response.data;
     },
-
-    generateReportForList: async (reportData: any): Promise<string> => {
-        const response = await api.post('/reports/gerarRelatorioDeLista/', reportData);
+    // MODIFICADO: o tipo agora é 'webapp' | 'servers'
+    getMissingVulnerabilities: async (relatorioId: string, type: 'webapp' | 'servers'): Promise<{ content: string[] }> => {
+        const response = await api.get(`/reports/getRelatorioMissingVulnerabilities/?relatorioId=${relatorioId}&type=${type}`);
         return response.data;
-    },
-
-    getMissingVulnerabilities: async (relatorioId: string, type: 'sites' | 'servers'): Promise<string[]> => {
-        const response = await api.get(`/reports/getRelatorioMissingVulnerabilities?relatorioId=${relatorioId}&type=${type}`);
-        return response.data.content;
-    },
-
-    downloadReportPdf: async (idRelatorio: string): Promise<Blob> => {
-        const response = await api.post('/reports/baixarRelatorioPdf/', { idRelatorio }, { responseType: 'blob' });
-        return response.data;
-    },
+    }
 };
 
 export const vulnerabilitiesApi = {
-    getAllVulnerabilities: async (type: 'sites' | 'servers'): Promise<any[]> => {
-        const response = await api.get(`/vulnerabilities/getVulnerabilidades/?type=${type}`);
+    getVulnerabilities: async (type: 'webapp' | 'servers'): Promise<any[]> => {
+        const response = await api.get(`/vulnerabilities/get/${type}`);
         return response.data;
     },
-
-    addVulnerability: async (type: 'sites' | 'servers', data: any): Promise<{ message: string }> => {
-        const response = await api.post('/vulnerabilities/addVulnerabilidade/', { type, data });
+    addVulnerability: async (type: 'webapp' | 'servers', data: any): Promise<{ message: string }> => {
+        const response = await api.post(`/vulnerabilities/add/${type}`, data);
         return response.data;
     },
-
-    updateVulnerability: async (type: 'sites' | 'servers', oldName: string, data: any): Promise<{ message: string }> => {
-        const response = await api.put('/vulnerabilities/updateVulnerabilidade/', { type, oldName, data });
+    updateVulnerability: async (type: 'webapp' | 'servers', vulnerabilityId: string, data: any): Promise<{ message: string }> => {
+        const response = await api.put(`/vulnerabilities/update/${type}/${vulnerabilityId}`, data);
         return response.data;
     },
-
-    deleteVulnerability: async (type: 'sites' | 'servers', name: string): Promise<{ message: string }> => {
-        const response = await api.delete('/vulnerabilities/deleteVulnerabilidade/', { data: { type, name } });
+    deleteVulnerability: async (type: 'webapp' | 'servers', vulnerabilityId: string): Promise<{ message: string }> => {
+        const response = await api.delete(`/vulnerabilities/delete/${type}/${vulnerabilityId}`);
         return response.data;
     },
-
-    uploadImage: async (formData: FormData): Promise<{ message: string; imagePath: string }> => {
-        const response = await api.post('/vulnerabilities/uploadImage/', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+    getVulnerabilityDescriptions: async (type: 'webapp' | 'servers'): Promise<any> => {
+        const response = await api.get(`/vulnerabilities/descriptions/${type}`);
         return response.data;
     },
-
-    getDescriptiveVulnerabilities: async (type: 'sites' | 'servers'): Promise<any[]> => {
-        const response = await api.get(`/vulnerabilities/getDescritivos/?type=${type}`);
+    updateVulnerabilityDescription: async (type: 'webapp' | 'servers', data: any): Promise<{ message: string }> => {
+        const response = await api.put(`/vulnerabilities/descriptions/${type}`, data);
         return response.data;
     },
 };
 
+// Objeto de API para gerenciamento de usuários
 export const userManagementApi = {
     getAllUsers: async (): Promise<UserData[]> => {
         const response = await api.get('/auth/users');
@@ -254,9 +238,33 @@ export const userManagementApi = {
     },
 };
 
+// Objeto de API para logs
 export const logsApi = {
-    getAllLogs: async (): Promise<LogData[]> => {
-        const response = await api.get('/auth/logs'); // Chama a nova rota do backend
+    getAllLogs: async (filters?: LogFilters): Promise<LogData[]> => {
+        let url = '/auth/logs';
+        if (filters) {
+            const params = new URLSearchParams();
+            if (filters.user_login) params.append('user_login', filters.user_login);
+            if (filters.action) params.append('action', filters.action);
+            if (filters.start_date) params.append('start_date', filters.start_date);
+            if (filters.end_date) params.append('end_date', filters.end_date);
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
+        }
+        const response = await api.get(url);
+        return response.data;
+    },
+};
+
+// NOVO: Objeto de API para configurações
+export const settingsApi = {
+    getTenableConfigStatus: async (): Promise<TenableConfigStatus> => {
+        const response = await api.get('/settings/tenable');
+        return response.data;
+    },
+    updateTenableConfig: async (tenable_api_key: string, tenable_access_key: string): Promise<{ message: string }> => {
+        const response = await api.put('/settings/tenable', { tenable_api_key, tenable_access_key });
         return response.data;
     },
 };

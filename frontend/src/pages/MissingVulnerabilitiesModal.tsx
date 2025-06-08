@@ -1,67 +1,83 @@
-import React from 'react';
-import { toast } from 'react-toastify'; // Importar toast
+// frontend/src/pages/MissingVulnerabilitiesModal.tsx
+import  { useState, useEffect } from 'react';
+import { ClipLoader } from 'react-spinners';
+import { toast, ToastContainer } from 'react-toastify'; // ADICIONAR ToastContainer AQUI
+import 'react-toastify/dist/ReactToastify.css';
+
+import { reportsApi } from '../api/backendApi';
 
 interface MissingVulnerabilitiesModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  vulnerabilities: string[]; // Lista de nomes de vulnerabilidades
+    isOpen: boolean;
+    onClose: () => void;
+    reportId: string;
+    type: 'webapp' | 'servers';
 }
 
-const MissingVulnerabilitiesModal: React.FC<MissingVulnerabilitiesModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  vulnerabilities,
-}) => {
-  if (!isOpen) return null;
+function MissingVulnerabilitiesModal({ isOpen, onClose, reportId, type }: MissingVulnerabilitiesModalProps) {
+    const [loading, setLoading] = useState(false);
+    const [vulnerabilities, setVulnerabilities] = useState<string[]>([]);
+    const [title, setTitle] = useState('');
 
-  const handleCopy = () => {
-    if (vulnerabilities.length > 0) {
-      const textToCopy = vulnerabilities.join('\n');
-      navigator.clipboard.writeText(textToCopy)
-        .then(() => {
-          toast.success('Vulnerabilidades copiadas para a área de transferência!'); // Alterado de alert para toast
-        })
-        .catch(err => {
-          console.error('Erro ao copiar vulnerabilidades:', err);
-          toast.error('Falha ao copiar vulnerabilidades.'); // Alterado de alert para toast
-        });
-    }
-  };
+    useEffect(() => {
+        if (isOpen) {
+            fetchMissingVulnerabilities();
+            setTitle(type === 'webapp' ? 'Vulnerabilidades WebApp Ausentes' : 'Vulnerabilidades de Servidores Ausentes');
+        }
+    }, [isOpen, reportId, type]);
 
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full m-4">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">{title}</h2>
-        {vulnerabilities.length > 0 ? (
-          <ul className="list-disc list-inside h-64 overflow-y-auto mb-4 p-2 border rounded bg-gray-50">
-            {vulnerabilities.map((vuln, index) => (
-              <li key={index} className="text-gray-700">{vuln}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-600 mb-4">Nenhuma vulnerabilidade ausente.</p>
-        )}
-        <div className="flex justify-end space-x-3">
-          {vulnerabilities.length > 0 && (
-            <button
-              onClick={handleCopy}
-              className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition duration-300"
-            >
-              Copiar Todas
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="bg-[#007BB4] hover:bg-[#009BE2] text-white font-bold py-2 px-4 rounded transition duration-300"
-          >
-            Fechar
-          </button>
+    const fetchMissingVulnerabilities = async () => {
+        setLoading(true);
+        try {
+            const data = await reportsApi.getMissingVulnerabilities(reportId, type);
+            setVulnerabilities(data.content);
+        } catch (error: any) {
+            console.error('Erro ao buscar vulnerabilidades ausentes:', error);
+            toast.error(error.response?.data?.error || 'Erro ao buscar vulnerabilidades ausentes.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-3/4 max-w-2xl max-h-[90vh] overflow-y-auto">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">{title}</h2>
+                <div className="mb-4 text-gray-600 text-sm">
+                    <p>Esta lista mostra vulnerabilidades esperadas que não foram encontradas no relatório.</p>
+                </div>
+
+                <div className="bg-gray-100 rounded-lg p-4 h-64 overflow-y-auto mb-6">
+                    {loading ? (
+                        <div className="flex justify-center items-center h-full">
+                            <ClipLoader size={50} color={"#1a73e8"} />
+                        </div>
+                    ) : vulnerabilities.length === 0 ? (
+                        <div className="flex justify-center items-center h-full">
+                            <p className="text-gray-500">Nenhuma vulnerabilidade ausente encontrada para este tipo.</p>
+                        </div>
+                    ) : (
+                        <ul className="list-disc pl-5 space-y-1 text-gray-800">
+                            {vulnerabilities.map((vuln, index) => (
+                                <li key={index}>{vuln}</li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                <div className="flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="bg-gray-300 text-black px-6 py-2 rounded-lg hover:bg-gray-400 transition"
+                    >
+                        Fechar
+                    </button>
+                </div>
+            </div>
+            <ToastContainer />
         </div>
-      </div>
-    </div>
-  );
-};
+    );
+}
 
 export default MissingVulnerabilitiesModal;

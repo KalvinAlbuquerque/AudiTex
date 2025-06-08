@@ -1,172 +1,145 @@
+// frontend/src/pages/GerenciarVulnerabilidades.tsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { ClipLoader } from 'react-spinners';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { vulnerabilitiesApi } from '../api/backendApi';
-
-interface VulnerabilityData {
-    Vulnerabilidade: string;
-    Categoria: string;
-    Subcategoria: string;
-    Descrição: string;
-    Solução: string;
-    Imagem?: string;
-}
-
-interface DescritivoData {
-    categoria: string;
-    descricao: string;
-    subcategorias?: { subcategoria: string; descricao: string }[];
-}
+import ConfirmDeleteModal from '../pages/ConfirmDeleteModal'; // Certifique-se que o caminho está correto
+import { vulnerabilitiesApi } from '../api/backendApi'; // Importar o vulnerabilitiesApi
 
 function GerenciarVulnerabilidades() {
-    const [selectedVulnType, setSelectedVulnType] = useState<'sites' | 'servers'>('sites'); 
-    const [vulnerabilities, setVulnerabilities] = useState<VulnerabilityData[]>([]);
-    const [descritivos, setDescritivos] = useState<DescritivoData[]>([]);
-    const [vulnSelecionada, setVulnSelecionada] = useState<VulnerabilityData | null>(null); 
+    const [vulnerabilities, setVulnerabilities] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState<VulnerabilityData>({ 
-        Vulnerabilidade: '',
-        Categoria: '',
-        Subcategoria: '',
-        Descrição: '',
-        Solução: '',
-        Imagem: '',
-    });
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [formMode, setFormMode] = useState<"add" | "edit">("add");
+    const [selectedVulnerability, setSelectedVulnerability] = useState<any | null>(null);
+    const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [error, setError] = useState<string | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [vulnerabilityToDelete, setVulnerabilityToDelete] = useState<any | null>(null);
+    const [activeTab, setActiveTab] = useState<'webapp' | 'servers'>('webapp'); // Controla a aba ativa
 
+    // Estado para o formulário de descrição
+    const [descriptionForm, setDescriptionForm] = useState({
+        name: '',
+        cvss: '',
+        description: '',
+        impact: '',
+        recommendation: '',
+    });
 
     useEffect(() => {
-        fetchVulnerabilities(selectedVulnType);
-        fetchDescritivos(selectedVulnType);
-    }, [selectedVulnType]);
+        fetchVulnerabilities(activeTab);
+    }, [activeTab]); // Refetch quando a aba ativa muda
 
-    const handleSelectVuln = (vuln: VulnerabilityData) => {
-        setVulnSelecionada(vuln);
-    };
-
-    const fetchVulnerabilities = async (type: 'sites' | 'servers') => {
+    const fetchVulnerabilities = async (type: 'webapp' | 'servers') => {
         setLoading(true);
-        setError(null);
         try {
-            const data = await vulnerabilitiesApi.getAllVulnerabilities(type);
+            const data = await vulnerabilitiesApi.getVulnerabilities(type); // 'type' aqui é 'webapp' ou 'servers'
             setVulnerabilities(data);
-        } catch (err: any) {
-            console.error('Erro ao buscar vulnerabilidades:', err);
-            setError(err.message || 'Erro ao carregar vulnerabilidades.');
-            setVulnerabilities([]);
+        } catch (error) {
+            console.error(`Erro ao buscar vulnerabilidades de ${type}:`, error);
+            toast.error(`Erro ao buscar vulnerabilidades de ${type}.`);
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchDescritivos = async (type: 'sites' | 'servers') => {
+    const fetchVulnerabilityDescription = async (type: 'webapp' | 'servers', name: string) => {
+        setLoading(true);
         try {
-            const data = await vulnerabilitiesApi.getDescriptiveVulnerabilities(type);
-            setDescritivos(data);
+            const data = await vulnerabilitiesApi.getVulnerabilityDescriptions(type);
+            const desc = data.find((d: any) => d.name === name);
+            if (desc) {
+                setDescriptionForm(desc);
+            } else {
+                setDescriptionForm({ name: name, cvss: '', description: '', impact: '', recommendation: '' });
+            }
+            setIsModalOpen(true);
         } catch (error) {
-            console.error('Erro ao buscar descritivos:', error);
-            toast.error('Erro ao buscar descritivos.');
-            setDescritivos([]);
+            console.error(`Erro ao buscar descrição da vulnerabilidade de ${type}:`, error);
+            toast.error(`Erro ao buscar descrição da vulnerabilidade de ${type}.`);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
-        } else {
-            setSelectedFile(null);
-        }
+    const handleSelectVulnerability = (vuln: any) => {
+        setSelectedVulnerability(vuln);
     };
 
     const handleAddClick = () => {
-        setFormMode("add");
-        setFormData({
-            Vulnerabilidade: '',
-            Categoria: '',
-            Subcategoria: '',
-            Descrição: '',
-            Solução: '',
-            Imagem: '',
-        });
-        setSelectedFile(null);
+        setFormMode('add');
+        setDescriptionForm({ name: '', cvss: '', description: '', impact: '', recommendation: '' });
         setIsModalOpen(true);
     };
 
     const handleEditClick = () => {
-        if (vulnSelecionada) {
-            setFormMode("edit");
-            setFormData({ ...vulnSelecionada });
-            setSelectedFile(null);
-            setIsModalOpen(true);
+        if (selectedVulnerability) {
+            setFormMode('edit');
+            fetchVulnerabilityDescription(activeTab, selectedVulnerability.name);
         } else {
-            toast.warn("Selecione uma vulnerabilidade para editar.");
+            toast.warn('Selecione uma vulnerabilidade para editar.');
         }
     };
 
-    const handleFormSubmit = async (e: React.FormEvent) => {
+    const handleDeleteClick = () => {
+        if (selectedVulnerability) {
+            setVulnerabilityToDelete(selectedVulnerability);
+            setShowDeleteModal(true);
+        } else {
+            toast.warn('Selecione uma vulnerabilidade para excluir.');
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!vulnerabilityToDelete?._id) return;
+
+        setLoading(true);
+        try {
+            const response = await vulnerabilitiesApi.deleteVulnerability(activeTab, vulnerabilityToDelete._id);
+            toast.success(response.message || 'Vulnerabilidade excluída com sucesso!');
+            setSelectedVulnerability(null);
+            fetchVulnerabilities(activeTab); // Recarregar lista
+        } catch (error: any) {
+            console.error('Erro ao excluir vulnerabilidade:', error);
+            toast.error(error.response?.data?.error || 'Erro ao excluir vulnerabilidade.');
+        } finally {
+            setLoading(false);
+            setShowDeleteModal(false);
+            setVulnerabilityToDelete(null);
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+        setVulnerabilityToDelete(null);
+    };
+
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setDescriptionForm(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleDescriptionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        if (!formData.Vulnerabilidade || !formData.Categoria || !formData.Subcategoria || !formData.Descrição || !formData.Solução) {
-            toast.warn('Preencha todos os campos obrigatórios.');
+        if (!descriptionForm.name || !descriptionForm.description || !descriptionForm.impact || !descriptionForm.recommendation) {
+            toast.warn('Preencha todos os campos obrigatórios (Nome, Descrição, Impacto, Recomendação).');
             setLoading(false);
             return;
         }
 
-        const dataToSend = { ...formData };
-        let imagePath = formData.Imagem || '';
-
-        if (selectedFile) {
-            const formDataForUpload = new FormData();
-            formDataForUpload.append('image', selectedFile);
-            formDataForUpload.append('categoria', formData.Categoria);
-            formDataForUpload.append('subcategoria', formData.Subcategoria);
-            formDataForUpload.append('vulnerabilidade', formData.Vulnerabilidade);
-
-            try {
-                const uploadResponse = await vulnerabilitiesApi.uploadImage(formDataForUpload);
-                imagePath = uploadResponse.imagePath;
-                toast.info('Imagem enviada com sucesso!');
-            } catch (uploadError: any) {
-                console.error('Erro ao enviar imagem:', uploadError);
-                toast.error(uploadError.message || 'Erro ao enviar imagem. Verifique os logs.');
-                setLoading(false);
-                return;
-            }
-        }
-        dataToSend.Imagem = imagePath;
-
         try {
-            let response;
-            if (formMode === "add") {
-                response = await vulnerabilitiesApi.addVulnerability(selectedVulnType, dataToSend);
-            } else {
-                if (!vulnSelecionada || !vulnSelecionada.Vulnerabilidade) {
-                    toast.error('Nenhuma vulnerabilidade selecionada para atualização.');
-                    setLoading(false);
-                    return;
-                }
-                response = await vulnerabilitiesApi.updateVulnerability(selectedVulnType, vulnSelecionada.Vulnerabilidade, dataToSend);
+            if (formMode === 'add') {
+                await vulnerabilitiesApi.addVulnerability(activeTab, descriptionForm);
+                toast.success('Vulnerabilidade adicionada com sucesso!');
+            } else if (selectedVulnerability?._id) {
+                await vulnerabilitiesApi.updateVulnerability(activeTab, selectedVulnerability._id, descriptionForm);
+                toast.success('Vulnerabilidade atualizada com sucesso!');
             }
-            toast.success(response.message || (formMode === "add" ? 'Vulnerabilidade adicionada!' : 'Vulnerabilidade atualizada!'));
-            
-            setVulnSelecionada(null);
-            setFormData({ Vulnerabilidade: '', Categoria: '', Subcategoria: '', Descrição: '', Solução: '', Imagem: '' });
-            setSelectedFile(null);
             setIsModalOpen(false);
-            fetchVulnerabilities(selectedVulnType);
+            setSelectedVulnerability(null);
+            fetchVulnerabilities(activeTab);
         } catch (error: any) {
             console.error('Erro ao salvar vulnerabilidade:', error);
             toast.error(error.response?.data?.error || 'Erro ao salvar vulnerabilidade.');
@@ -175,285 +148,218 @@ function GerenciarVulnerabilidades() {
         }
     };
 
-    const handleDeleteClick = async () => {
-        if (!vulnSelecionada || !vulnSelecionada.Vulnerabilidade) {
-            toast.warn('Selecione uma vulnerabilidade para excluir.');
-            return;
-        }
-        if (!window.confirm(`Tem certeza que deseja excluir a vulnerabilidade "${vulnSelecionada.Vulnerabilidade}"?`)) {
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await vulnerabilitiesApi.deleteVulnerability(selectedVulnType, vulnSelecionada.Vulnerabilidade);
-            toast.success(response.message || 'Vulnerabilidade excluída com sucesso!');
-            setVulnSelecionada(null);
-            fetchVulnerabilities(selectedVulnType);
-        } catch (error: any) {
-            console.error('Erro ao excluir vulnerabilidade:', error);
-            toast.error(error.response?.data?.error || 'Erro ao excluir vulnerabilidade.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Função para upload de imagem (CAUSADOR DO ERRO - COMENTADO/REMOVIDO)
+    // Se você quiser implementar isso, precisará de uma rota no backend e uma função no backendApi.tsx
+    // const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    //     const file = event.target.files?.[0];
+    //     if (!file) return;
 
-    const getUniqueCategories = () => {
-        const categories = new Set<string>();
-        descritivos.forEach(d => categories.add(d.categoria));
-        return Array.from(categories);
-    };
+    //     const formData = new FormData();
+    //     formData.append('image', file);
+    //     formData.append('vulnerabilityId', selectedVulnerability?._id || descriptionForm.name); // Associe ao ID ou nome da vulnerabilidade
 
-
-    const filteredVulnerabilities = vulnerabilities.filter((vuln) =>
-        vuln.Vulnerabilidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vuln.Categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vuln.Subcategoria.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const subcategoriasFiltradas = descritivos.find(
-        (cat) => cat.categoria === formData.Categoria
-    )?.subcategorias || [];
-
+    //     setLoading(true);
+    //     try {
+    //         // ESTA LINHA CAUSARIA O ERRO "Property 'uploadImage' does not exist"
+    //         // Você precisaria adicionar vulnerabilitiesApi.uploadImage = async (formData: FormData) => {...} em backendApi.tsx
+    //         // await vulnerabilitiesApi.uploadImage(formData); 
+    //         // toast.success('Imagem carregada com sucesso!');
+    //     } catch (error: any) {
+    //         // console.error('Erro ao carregar imagem:', error);
+    //         // toast.error(error.response?.data?.error || 'Erro ao carregar imagem.');
+    //     } finally {
+    //         // setLoading(false);
+    //     }
+    // };
 
     return (
-        <div
-            className="min-h-screen bg-cover bg-center flex"
-            style={{ backgroundImage: "url('/assets/fundo.png')" }}
-        >
-            <div
-                className="w-1/5 text-white flex flex-col items-center justify-center p-4 shadow-lg min-h-screen"
-            >
-                <Link to="/">
-                    <img
-                        src="/assets/logocogel.jpg"
-                        alt="COGEL Logo"
-                        className="w-32 h-auto"
-                    />
-                </Link>
+        <div className="min-h-screen bg-white p-8 flex flex-col rounded-lg">
+            <h1 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Vulnerabilidades</h1>
+
+            {/* Abas de seleção */}
+            <div className="mb-4 border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button
+                        onClick={() => setActiveTab('webapp')}
+                        className={`${
+                            activeTab === 'webapp'
+                                ? 'border-[#007BB4] text-[#007BB4]'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                        Vulnerabilidades WebApp
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('servers')}
+                        className={`${
+                            activeTab === 'servers'
+                                ? 'border-[#007BB4] text-[#007BB4]'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                        Vulnerabilidades de Servidores
+                    </button>
+                </nav>
             </div>
 
-            <div className="w-4/5 p-8 bg-white rounded-l-lg shadow-md min-h-screen flex flex-col">
-                <h1 className="text-xl font-bold text-gray-800 mb-4">Gerenciar Vulnerabilidades</h1>
-
-                <div className="mb-4 flex space-x-4">
-                    <button
-                        className={`px-4 py-2 rounded-md font-medium ${
-                            selectedVulnType === 'sites' ? 'bg-[#007BB4] text-white' : 'bg-gray-200 text-black hover:bg-gray-300'
-                        }`}
-                        onClick={() => setSelectedVulnType('sites')}
-                    >
-                        Gerenciar Vulnerabilidades de Sites
-                    </button>
-                    <button
-                        className={`px-4 py-2 rounded-md font-medium ${
-                            selectedVulnType === 'servers' ? 'bg-[#007BB4] text-white' : 'bg-gray-200 text-black hover:bg-gray-300'
-                        }`}
-                        onClick={() => setSelectedVulnType('servers')}
-                    >
-                        Gerenciar Vulnerabilidades de Servidores
-                    </button>
-                </div>
-
-                <input
-                    type="text"
-                    placeholder="Pesquisar por categoria, subcategoria ou vulnerabilidade..."
-                    className="w-full p-2 border border-gray-300 rounded-md mb-4 text-black"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+            <div className="flex justify-end space-x-4 mb-4">
+                <button
+                    className="px-6 py-2 rounded-lg text-white font-medium bg-green-600 hover:bg-green-700"
+                    onClick={handleAddClick}
                     disabled={loading}
-                />
+                >
+                    Adicionar Vulnerabilidade
+                </button>
+                <button
+                    className={`px-6 py-2 rounded-lg text-white font-medium ${
+                        selectedVulnerability ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!selectedVulnerability || loading}
+                    onClick={handleEditClick}
+                >
+                    Editar Vulnerabilidade
+                </button>
+                <button
+                    className={`px-6 py-2 rounded-lg text-white font-medium ${
+                        selectedVulnerability ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-400 cursor-not-allowed'
+                    }`}
+                    disabled={!selectedVulnerability || loading}
+                    onClick={handleDeleteClick}
+                >
+                    Excluir Vulnerabilidade
+                </button>
+            </div>
 
-                <div className="bg-gray-100 h-80 overflow-y-auto rounded-md p-4 mb-6">
-                    {loading && filteredVulnerabilities.length === 0 ? (
-                        <div className="flex justify-center items-center h-full">
-                            <ClipLoader size={50} color={"#1a73e8"} />
-                        </div>
-                    ) : error ? (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-red-500">Erro: {error}</p>
-                        </div>
-                    ) : filteredVulnerabilities.length === 0 ? (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-gray-500">Nenhuma vulnerabilidade encontrada para {selectedVulnType === 'sites' ? 'sites' : 'servidores'}.</p>
-                        </div>
-                    ) : (
-                        <ul className="space-y-2">
-                            {filteredVulnerabilities.map((vuln) => (
-                                <li
-                                    key={vuln.Vulnerabilidade}
-                                    className={`p-3 rounded cursor-pointer border border-gray-200 ${
-                                        vulnSelecionada?.Vulnerabilidade === vuln.Vulnerabilidade
-                                            ? "bg-[#007BB4] text-white"
-                                            : "bg-white hover:bg-gray-200 text-black"
-                                    }`}
-                                    onClick={() => handleSelectVuln(vuln)}
-                                >
-                                    <p className="font-semibold">{vuln.Vulnerabilidade}</p>
-                                    <p className="text-sm">
-                                        Categoria: {vuln.Categoria} | Subcategoria: {vuln.Subcategoria}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-
-                <div className="flex justify-end space-x-4 mt-auto">
-                    <button
-                        className="px-6 py-2 rounded text-white font-medium bg-green-600 hover:bg-green-700"
-                        onClick={handleAddClick}
-                        disabled={loading}
-                    >
-                        Adicionar
-                    </button>
-                    <button
-                        className={`px-6 py-2 rounded text-white font-medium ${
-                            vulnSelecionada ? "bg-yellow-600 hover:bg-yellow-700" : "bg-gray-400 cursor-not-allowed"
-                        }`}
-                        disabled={!vulnSelecionada || loading}
-                        onClick={handleEditClick}
-                    >
-                        Editar
-                    </button>
-                    <button
-                        className={`px-6 py-2 rounded text-white font-medium ${
-                            vulnSelecionada ? "bg-red-600 hover:bg-red-700" : "bg-gray-400 cursor-not-allowed"
-                        }`}
-                        disabled={!vulnSelecionada || loading}
-                        onClick={handleDeleteClick}
-                    >
-                        Excluir
-                    </button>
-                </div>
+            <div className="bg-gray-100 flex-1 rounded-lg p-4 overflow-y-auto">
+                {loading && vulnerabilities.length === 0 ? (
+                    <div className="flex justify-center items-center h-full">
+                        <ClipLoader size={50} color={"#1a73e8"} />
+                    </div>
+                ) : vulnerabilities.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-500">Nenhuma vulnerabilidade encontrada para {activeTab === 'webapp' ? 'WebApp' : 'Servidores'}.</p>
+                    </div>
+                ) : (
+                    <ul className="space-y-2">
+                        {vulnerabilities.map(vuln => (
+                            <li
+                                key={vuln._id}
+                                className={`p-3 rounded-lg cursor-pointer border border-gray-200 ${
+                                    selectedVulnerability?._id === vuln._id
+                                        ? 'bg-[#007BB4] text-white'
+                                        : 'bg-white hover:bg-gray-200 text-black'
+                                }`}
+                                onClick={() => handleSelectVulnerability(vuln)}
+                            >
+                                <p className="font-semibold">{vuln.name}</p>
+                                <p className="text-sm">CVSS: {vuln.cvss}</p>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </div>
 
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-8 rounded-lg shadow-xl w-1/2 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-white p-8 rounded-lg shadow-xl w-1/2 max-w-md max-h-[90vh] overflow-y-auto">
                         <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-                            {formMode === "add" ? "Adicionar Nova Vulnerabilidade" : "Editar Vulnerabilidade"}
+                            {formMode === 'add' ? 'Adicionar Nova Vulnerabilidade' : 'Editar Vulnerabilidade'}
                         </h2>
-                        <form onSubmit={handleFormSubmit}>
+                        <form onSubmit={handleDescriptionSubmit}>
                             <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="Vulnerabilidade">
-                                    Nome da Vulnerabilidade:
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
+                                    Nome:
                                 </label>
                                 <input
                                     type="text"
-                                    id="Vulnerabilidade"
-                                    name="Vulnerabilidade"
-                                    value={formData.Vulnerabilidade}
+                                    id="name"
+                                    name="name"
+                                    value={descriptionForm.name}
                                     onChange={handleFormChange}
                                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                                     required
-                                    disabled={formMode === "edit" || loading}
+                                    disabled={loading || formMode === 'edit'} // Nome não editável para evitar inconsistências
                                 />
-                                {formMode === "edit" && <p className="text-xs text-gray-500 mt-1">O nome da vulnerabilidade não pode ser alterado diretamente.</p>}
+                                {formMode === 'edit' && <p className="text-xs text-gray-500 mt-1">O nome da vulnerabilidade não pode ser alterado.</p>}
                             </div>
-
                             <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="Categoria">
-                                    Categoria:
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="cvss">
+                                    CVSS:
                                 </label>
-                                <select
-                                    id="Categoria"
-                                    name="Categoria"
-                                    value={formData.Categoria}
+                                <input
+                                    type="text"
+                                    id="cvss"
+                                    name="cvss"
+                                    value={descriptionForm.cvss}
                                     onChange={handleFormChange}
                                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                    required
                                     disabled={loading}
-                                >
-                                    <option value="">Selecione uma Categoria</option>
-                                    {getUniqueCategories().map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                               <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="Subcategoria">
-                                    Subcategoria:
-                                </label>
-                                <select
-                                    id="Subcategoria"
-                                    name="Subcategoria"
-                                    value={formData.Subcategoria}
-                                    onChange={handleFormChange}
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                    required
-                                    disabled={loading || !formData.Categoria}
-                                >
-                                    <option value="">Selecione uma Subcategoria</option>
-                                    {subcategoriasFiltradas.map((subcat) => (
-                                        <option key={subcat.subcategoria} value={subcat.subcategoria}>
-                                            {subcat.subcategoria} 
-                                        </option>
-                                    ))}
-                                </select>
-                                {!formData.Categoria && <p className="text-xs text-gray-500 mt-1">Selecione uma categoria primeiro para ver as subcategorias.</p>}
+                                />
                             </div>
                             <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="Descrição">
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
                                     Descrição:
                                 </label>
                                 <textarea
-                                    id="Descrição"
-                                    name="Descrição"
-                                    value={formData.Descrição}
+                                    id="description"
+                                    name="description"
+                                    value={descriptionForm.description}
                                     onChange={handleFormChange}
-                                    rows={4}
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32"
                                     required
                                     disabled={loading}
                                 ></textarea>
                             </div>
-
                             <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="Solução">
-                                    Solução:
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="impact">
+                                    Impacto:
                                 </label>
                                 <textarea
-                                    id="Solução"
-                                    name="Solução"
-                                    value={formData.Solução}
+                                    id="impact"
+                                    name="impact"
+                                    value={descriptionForm.impact}
                                     onChange={handleFormChange}
-                                    rows={4}
-                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-24"
+                                    required
+                                    disabled={loading}
+                                ></textarea>
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="recommendation">
+                                    Recomendação:
+                                </label>
+                                <textarea
+                                    id="recommendation"
+                                    name="recommendation"
+                                    value={descriptionForm.recommendation}
+                                    onChange={handleFormChange}
+                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-24"
                                     required
                                     disabled={loading}
                                 ></textarea>
                             </div>
 
-                            <div className="mb-4">
-                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="ImagemUpload">
-                                    Upload da Imagem (PNG, JPG, JPEG, GIF):
+                            {/* Campo de upload de imagem (CAUSADOR DO ERRO - COMENTADO/REMOVIDO) */}
+                            {/* <div className="mb-4">
+                                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="imageUpload">
+                                    Upload de Imagem (Opcional):
                                 </label>
                                 <input
                                     type="file"
-                                    id="ImagemUpload"
-                                    name="ImagemUpload"
-                                    accept=".png,.jpg,.jpeg,.gif"
-                                    onChange={handleFileChange}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    id="imageUpload"
+                                    name="image"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                                     disabled={loading}
                                 />
-                                {formData.Imagem && !selectedFile && (
-                                    <p className="text-sm text-gray-600 mt-2">
-                                        Imagem atual: <span className="text-gray-700">{formData.Imagem}</span> 
-                                    </p>
-                                )}
-                                {selectedFile && (
-                                    <p className="text-sm text-gray-600 mt-2">
-                                        Arquivo selecionado: {selectedFile.name}
-                                    </p>
-                                )}
-                            </div>
+                            </div> */}
+
 
                             <div className="flex justify-end space-x-4 mt-6">
                                 <button
                                     type="button"
-                                    className="px-6 py-2 rounded text-black font-medium bg-gray-300 hover:bg-gray-400"
+                                    className="px-6 py-2 rounded-lg text-black font-medium bg-gray-300 hover:bg-gray-400"
                                     onClick={() => setIsModalOpen(false)}
                                     disabled={loading}
                                 >
@@ -461,15 +367,23 @@ function GerenciarVulnerabilidades() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-6 py-2 rounded text-white font-medium bg-[#007BB4] hover:bg-[#009BE2]"
+                                    className="px-6 py-2 rounded-lg text-white font-medium bg-[#007BB4] hover:bg-[#009BE2]"
                                     disabled={loading}
                                 >
-                                    {loading ? <ClipLoader size={20} color={"#fff"} /> : (formMode === "add" ? "Adicionar" : "Salvar Alterações")}
+                                    {loading ? <ClipLoader size={20} color={"#fff"} /> : (formMode === 'add' ? 'Adicionar' : 'Salvar Alterações')}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
+            )}
+            {showDeleteModal && vulnerabilityToDelete && (
+                <ConfirmDeleteModal
+                    isOpen={showDeleteModal}
+                    onClose={handleCancelDelete}
+                    onConfirm={handleConfirmDelete}
+                    message={`Tem certeza que deseja excluir a vulnerabilidade "${vulnerabilityToDelete.name}"? Esta ação é irreversível.`}
+                />
             )}
             <ToastContainer />
         </div>

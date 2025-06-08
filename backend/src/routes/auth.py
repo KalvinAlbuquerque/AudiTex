@@ -7,6 +7,7 @@ from ..models.user import User
 from bson.objectid import ObjectId
 import logging
 from ..core.logger import app_logger 
+from datetime import datetime, timedelta 
 
 # Configura o logger para este módulo
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +18,20 @@ CORS(auth_bp)
 
 db_instance = Database()
 
+# Lista de ações possíveis (para referência, pode ser usada no frontend)
+POSSIBLE_LOG_ACTIONS = [
+    "USER_CREATED",
+    "USER_UPDATED",
+    "USER_DELETED",
+    "REPORT_GENERATED",
+    "REPORT_DELETED",
+    "ALL_REPORTS_DELETED",
+    "REPORT_DOWNLOADED",
+    "TENABLE_SETTINGS_UPDATED",
+    "TENABLE_SETTINGS_CREATED",
+    "GET_TENABLE_SETTINGS_ERROR",
+    # Adicione outras ações que você logar aqui
+]
 
 @auth_bp.route('/login', methods=['POST'])
 def login_user():
@@ -180,21 +195,47 @@ def delete_user(user_id):
 
 @auth_bp.route('/logs', methods=['GET'])
 def get_logs():
-    # Em uma aplicação real, aqui você verificaria o token JWT e o perfil do usuário
-    # para garantir que apenas administradores possam ver os logs.
-    # user = get_jwt_identity() # Exemplo: Se estivesse usando flask_jwt_extended
-    # if not user or user['profile'] != 'Administrator':
-    #    return jsonify({"error": "Acesso não autorizado."}), 403
-
     db_instance = Database()
     try:
-        # Você pode adicionar filtros aqui (ex: data, tipo de ação, login do usuário)
-        # Exemplo de filtro: action_type = request.args.get('action')
-        # query = {}
-        # if action_type:
-        #     query['action'] = action_type
+        query = {} # Dicionário para construir a query do MongoDB
 
-        logs_data = db_instance.find("logs") # Busca todos os logs por enquanto
+        # Filtrar por usuário
+        user_login_filter = request.args.get('user_login')
+        if user_login_filter:
+            query['user_login'] = user_login_filter
+
+        # Filtrar por ação
+        action_filter = request.args.get('action')
+        if action_filter and action_filter in POSSIBLE_LOG_ACTIONS: # Validar a ação
+            query['action'] = action_filter
+        elif action_filter and action_filter not in POSSIBLE_LOG_ACTIONS:
+            return jsonify({"error": f"Ação inválida: {action_filter}. Ações possíveis: {', '.join(POSSIBLE_LOG_ACTIONS)}"}), 400
+
+        # Filtrar por período de tempo / data
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+
+        if start_date_str or end_date_str:
+            timestamp_query = {}
+            if start_date_str:
+                try:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                    timestamp_query['$gte'] = start_date
+                except ValueError:
+                    return jsonify({"error": "Formato de data de início inválido. Use YYYY-MM-DD."}), 400
+            
+            if end_date_str:
+                try:
+                    # Adiciona 1 dia para incluir o dia inteiro de end_date
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d') + timedelta(days=1)
+                    timestamp_query['$lt'] = end_date # $lt (less than) para pegar até o final do dia
+                except ValueError:
+                    return jsonify({"error": "Formato de data de fim inválido. Use YYYY-MM-DD."}), 400
+            
+            if timestamp_query:
+                query['timestamp'] = timestamp_query
+
+        logs_data = db_instance.find("logs", query) # Busca logs com a query construída
 
         logs_list = []
         for log in logs_data:
@@ -203,10 +244,9 @@ def get_logs():
                 "action": log.get("action"),
                 "user_login": log.get("user_login"),
                 "details": log.get("details"),
-                "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None # Formata a data para ISO 8601
+                "timestamp": log.get("timestamp").isoformat() if log.get("timestamp") else None
             })
         
-        # Opcional: Ordenar por timestamp descendente
         logs_list.sort(key=lambda x: x['timestamp'] if x['timestamp'] else '', reverse=True)
 
         return jsonify(logs_list), 200
