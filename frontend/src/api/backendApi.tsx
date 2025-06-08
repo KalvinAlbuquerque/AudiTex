@@ -67,14 +67,6 @@ export interface UserData {
     profile: 'User' | 'Administrator';
 }
 
-export interface LogData {
-    id: string;
-    action: string;
-    user_login: string;
-    details: any; // Pode ser qualquer objeto
-    timestamp: string; // Formato ISO string
-}
-
 export const listsApi = {
     getAllLists: async (): Promise<Lista[]> => {
         const response = await api.get('/lists/getTodasAsListas/');
@@ -250,13 +242,6 @@ export const userManagementApi = {
 
     deleteUser: async (userId: string): Promise<{ message: string }> => {
         const response = await api.delete(`/auth/users/${userId}`);
-        return response.data;
-    },
-};
-
-export const logsApi = {
-    getAllLogs: async (): Promise<LogData[]> => {
-        const response = await api.get('/auth/logs'); // Chama a nova rota do backend
         return response.data;
     },
 };

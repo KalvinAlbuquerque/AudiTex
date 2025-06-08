@@ -7,7 +7,6 @@ import shutil
 from bson.objectid import ObjectId
 import pandas as pd
 import traceback 
-from ..core.logger import app_logger 
 
 # Importa a classe Config
 from ..core.config import Config
@@ -48,73 +47,52 @@ def getRelatoriosGerados():
 def deleteRelatorio(relatorio_id):
     try:
         db_instance = Database()
-
-        # Buscar informações do relatório antes da exclusão para o log
-        report_doc = db_instance.find_one("relatorios", {"_id": db_instance.get_object_id(relatorio_id)})
-
+        
         delete_result = db_instance.delete_one("relatorios", {"_id": db_instance.get_object_id(relatorio_id)})
-
+        
         if delete_result.deleted_count == 0:
             db_instance.close()
             return jsonify({"message": "Relatório não encontrado no banco de dados."}), 404
 
         report_folder_path = Path(config.caminho_shared_relatorios) / relatorio_id
-
+        
         if report_folder_path.exists() and report_folder_path.is_dir():
             shutil.rmtree(report_folder_path)
             print(f"DEBUG: Pasta do relatório excluída: {report_folder_path}")
         else:
             print(f"DEBUG: Pasta do relatório não encontrada ou não é um diretório: {report_folder_path}")
 
-        # NOVO: Registrar log de exclusão de relatório
-        if report_doc:
-            # Idealmente, o user_login viria do token JWT do usuário autenticado.
-            # Por agora, usaremos um placeholder ou o login do relatório se disponível.
-            # Exemplo: user_login="admin" ou extrair de um token (futuro)
-            app_logger.log_action(
-                action="REPORT_DELETED",
-                user_login="SYSTEM_ACTION", # Placeholder: substituir pelo login do usuário logado
-                details={"report_id": relatorio_id, "report_name": report_doc.get('nome', 'unknown')}
-            )
-
         db_instance.close()
         return jsonify({"message": "Relatório excluído com sucesso."}), 200
 
     except Exception as e:
         print(f"Erro ao excluir relatório {relatorio_id}: {str(e)}")
-        traceback.print_exc()
+        traceback.print_exc() 
         return jsonify({"error": f"Erro interno ao excluir relatório: {str(e)}"}), 500
 
 @reports_bp.route('/deleteAllRelatorios/', methods=['DELETE'])
 def deleteAllRelatorios():
     try:
         db_instance = Database()
-
+        
         all_relatorios = db_instance.find("relatorios")
-
+        
         delete_db_result = db_instance.delete_many("relatorios", {})
-
+        
         deleted_folders_count = 0
         for relatorio in all_relatorios:
             relatorio_id = str(relatorio["_id"])
             report_folder_path = Path(config.caminho_shared_relatorios) / relatorio_id
-
+            
             if report_folder_path.exists() and report_folder_path.is_dir():
                 try:
                     shutil.rmtree(report_folder_path)
                     deleted_folders_count += 1
-                    print(f"ATENÇÃO: Não foi possível excluir a pasta {report_folder_path}: {str(folder_e)}")
-                except Exception as folder_e:
+                    print(f"DEBUG: Pasta {report_folder_path} excluída com sucesso.") 
+                except Exception as folder_e: 
                     print(f"ATENÇÃO: Não foi possível excluir a pasta {report_folder_path}: {str(folder_e)}")
             else:
                 print(f"DEBUG: Pasta {report_folder_path} não encontrada ou não é um diretório.")
-
-        # NOVO: Registrar log de exclusão de TODOS os relatórios
-        app_logger.log_action(
-            action="ALL_REPORTS_DELETED",
-            user_login="SYSTEM_ACTION", # Placeholder: substituir pelo login do usuário logado
-            details={"count_db_deleted": delete_db_result.deleted_count, "count_folders_deleted": deleted_folders_count}
-        )
 
         db_instance.close()
         return jsonify({
@@ -123,9 +101,8 @@ def deleteAllRelatorios():
 
     except Exception as e:
         print(f"Erro ao excluir todos os relatórios: {str(e)}")
-        traceback.print_exc()
+        traceback.print_exc() 
         return jsonify({"error": f"Erro interno ao excluir todos os relatórios: {str(e)}"}), 500
-
 
 @reports_bp.route('/gerarRelatorioDeLista/', methods=['POST'])
 def gerarRelatorioDeLista():
@@ -301,24 +278,6 @@ def gerarRelatorioDeLista():
             # Retorne um status 500 ou 400 dependendo da natureza do erro, e a mensagem detalhada.
             return jsonify({"error": f"Falha na geração do PDF: {message}"}), 500
 
-        # Obter o login do usuário autenticado (placeholder)
-        # Em uma aplicação real, você obteria o login do usuário do token JWT.
-        # Por enquanto, usaremos um valor fixo para demonstração.
-        # user_login = "admin" # Exemplo: pegar do token JWT
-        user_login = "SYSTEM_USER_GENERATION" # Placeholder: substituir pelo login do usuário logado
-
-        # NOVO: Registrar log de geração de relatório
-        app_logger.log_action(
-            action="REPORT_GENERATED",
-            user_login=user_login,
-            details={
-                "report_id": str(novo_relatorio_id),
-                "list_id": id_lista,
-                "secretaria": nome_secretaria,
-                "sigla": sigla_secretaria,
-                "total_vulnerabilities": total_vulnerabilidades_combinado
-            }
-        )
         # Se a compilação foi bem-sucedida
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
         db_instance.close()
