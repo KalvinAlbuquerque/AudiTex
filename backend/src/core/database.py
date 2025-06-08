@@ -1,12 +1,24 @@
+# backend/src/core/database.py
 from pymongo import MongoClient
 from typing import Any, Dict, List
 from bson.objectid import ObjectId
+import os # NOVO: Importa o módulo os
 
 class Database:
     def __init__(self, db_name: str = "mydatabase"):
-        # ATENÇÃO: Alterado de "mongodb://localhost:27017/" para "mongodb://mongodb:27017/"
-        # 'mongodb' é o nome do serviço MongoDB no docker-compose.yml
-        self.client = MongoClient("mongodb://mongodb:27017/") 
+        # NOVO: Obtém as credenciais do MongoDB das variáveis de ambiente
+        #mongo_user = os.getenv("MONGO_APP_USER", "app_user") # Usuário padrão se a variável não for definida
+        #mongo_password = os.getenv("MONGO_APP_PASSWORD", "app_password_dev") # Senha padrão se a variável não for definida
+        mongo_user = "admin"
+        mongo_password = "admin"
+        mongo_host = os.getenv("MONGO_HOST", "mongodb") # Garante que o host padrão é 'mongodb'
+        mongo_port = os.getenv("MONGO_PORT", "27017") # Porta padrão
+
+        # Conecta usando as credenciais
+        #self.client = MongoClient("mongodb://mongodb:27017/") # LINHA ANTIGA
+        self.client = MongoClient(
+            f"mongodb://{mongo_user}:{mongo_password}@{mongo_host}:{mongo_port}/{db_name}?authSource=admin"
+        )
         self.db = self.client[db_name]
 
     def insert_one(self, collection_name: str, data: Dict[str, Any]):

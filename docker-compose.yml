@@ -1,7 +1,3 @@
-# docker-compose.yml - Configuração do ambiente de desenvolvimento para o projeto AudiTex
-
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:latest
@@ -9,48 +5,52 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
-    restart: unless-stopped # Melhor para desenvolvimento
+      # Monta o script para criar o usuário da aplicação no MongoDB
+      - ./backend/init-mongo-app-user.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    environment:
+      MONGO_INITDB_DATABASE: mydatabase
+      # HARDCODED PARA FORÇAR AUTENTICAÇÃO NO MONGODB - APENAS PARA DEBUG
+      MONGO_INITDB_ROOT_USERNAME: admin_root_mongo # Escolha um nome de usuário root
+      MONGO_INITDB_ROOT_PASSWORD: admin_root_password_123 # Escolha uma senha root forte
+      # Estas variáveis serão lidas pelo init-mongo-app-user.js para criar o usuário 'admin'/'admin'
+      MONGO_APP_USER: admin
+      MONGO_APP_PASSWORD: admin
+    restart: unless-stopped
 
   backend:
     build:
-      context: ./backend # O Dockerfile para o backend está na pasta 'backend'
-      dockerfile: Dockerfile.backend # Nome explícito do Dockerfile para o backend
+      context: ./backend
+      dockerfile: Dockerfile.backend
     container_name: auditex_backend
     ports:
       - "5000:5000"
     environment:
-      MONGO_URI: mongodb://mongodb:27017/mydatabase # Nome do serviço MongoDB
-      TENABLE_SECRET_KEY: ${TENABLE_SECRET_KEY} # Variáveis de ambiente lidas do .env
-      TENABLE_ACCESS_KEY: ${TENABLE_ACCESS_KEY} # Variáveis de ambiente lidas do .env
+      TENABLE_SECRET_KEY: ${TENABLE_SECRET_KEY} # Se ainda usa variáveis de ambiente para Tenable
+      TENABLE_ACCESS_KEY: ${TENABLE_ACCESS_KEY} # Se ainda usa variáveis de ambiente para Tenable
+      FLASK_DEBUG: 1
+      FLASK_RUN_RELOAD: 'false' # Mantém desativado para evitar inconsistências no DB
+      # As credenciais do MongoDB e do usuário da aplicação são hardcoded nos scripts/código
     depends_on:
       - mongodb
     volumes:
-      # Mapeia o código-fonte do backend para hot-reloading em desenvolvimento
       - ./backend/src:/app/src
-      # Mapeia a pasta de dados compartilhados do host para o contêiner
       - ./shared_data:/app/shared_data
-      # Mapeia o config.json
       - ./backend/config.json:/app/config.json
-      # Volume anônimo para node_modules, para evitar problemas de compatibilidade entre host/container
-      - /app/node_modules # Se houvesse node_modules no backend (improvável para Python puro)
     restart: unless-stopped
 
   frontend:
     build:
-      context: ./frontend # O Dockerfile para o frontend está na pasta 'frontend'
-      dockerfile: Dockerfile.frontend # Nome explícito do Dockerfile para o frontend
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
     container_name: auditex_frontend
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_API_URL: http://backend:5000 # Comunicação interna com o serviço 'backend'
+      REACT_APP_API_URL: http://backend:5000
     depends_on:
       - backend
     volumes:
-      # Mapeia o código-fonte do frontend para hot-reloading em desenvolvimento
       - ./frontend:/app
-      # Volume anônimo para node_modules para evitar problemas de compatibilidade entre host/container
       - /app/node_modules
     restart: unless-stopped
 
