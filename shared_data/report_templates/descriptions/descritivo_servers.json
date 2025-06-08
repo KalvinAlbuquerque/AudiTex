@@ -47,6 +47,10 @@
           {
             "subcategoria": "Sistemas e Aplicações Fora de Suporte",
             "descricao": "Uso de versões descontinuadas de software, como sistemas operacionais ou servidores, que não recebem mais patches de segurança e apresentam falhas conhecidas."
+          },
+          {
+            "subcategoria": "Protocolos e Cifras Depreciadas",
+            "descricao": "Uso de protocolos e cifras antigas ou vulneráveis, como SSL 2/3 e RC4, que são suscetíveis a ataques e não oferecem proteção adequada."
           }
         ]
       },

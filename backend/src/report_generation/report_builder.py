@@ -281,7 +281,12 @@ def gerar_conteudo_latex_para_vulnerabilidades(
     categorias_formatadas: Dict[str, str] = {}
     vulnerabilidades_sem_categoria: List[str] = []
 
-    descritivo_list = descritivo_vulnerabilidades_json.get("vulnerabilidades", [])
+    # Certifique-se de que descritivo_list é uma lista de categorias, não um dicionário aninhado
+    # _load_data_ já deve retornar o dicionário completo que contém a chave "vulnerabilidades"
+    # então você precisa pegar a lista de categorias que está dentro dela.
+    descritivo_data = descritivo_vulnerabilidades_json # descritivo_vulnerabilidades_json já é o dicionário completo.
+    descritivo_list = descritivo_data.get("vulnerabilidades", []) # Correção para acessar a lista real.
+
 
     for v in vulnerabilidades_do_relatorio_txt:
         vulnerabilidade_nome = v["Vulnerabilidade"]
@@ -327,6 +332,7 @@ def gerar_conteudo_latex_para_vulnerabilidades(
 
     for categoria_padronizada in categorias_ordenadas:
         categoria_formatada = categorias_formatadas.get(categoria_padronizada, categoria_padronizada)
+        # Primeiro, encontre a descrição da categoria principal
         descricao_categoria = next(
             (item["descricao"] for item in descritivo_list
              if item.get("categoria") == categoria_padronizada and "subcategoria" not in item),
@@ -338,20 +344,39 @@ def gerar_conteudo_latex_para_vulnerabilidades(
         subcategorias = categorias_agrupadas.get(categoria_padronizada, {})
         for subcategoria_padronizada in sorted(subcategorias.keys(), key=lambda x: categorias_formatadas.get(x, x)):
             subcategoria_formatada = categorias_formatadas.get(subcategoria_padronizada, subcategoria_padronizada)
-            
+
             descricao_subcategoria = "Descrição não disponível."
             target_categoria_padded = categoria_formatada
             target_subcategoria_padded = subcategoria_formatada
 
-            for item_desc in descritivo_list:
-                item_desc_categoria_padded = item_desc.get("categoria")
-                item_desc_subcategoria_padded = item_desc.get("subcategoria")
+            found_match_in_descritivo = False
 
-                if item_desc_categoria_padded == target_categoria_padded and \
-                   item_desc_subcategoria_padded == target_subcategoria_padded:
-                    descricao_subcategoria = item_desc["descricao"]
-                    found_match_in_descritivo = True
-                    break
+            # Itere através das subcategorias da categoria principal no descritivo original
+            # para encontrar a descrição correta da subcategoria.
+            # Você precisa acessar a lista de subcategorias dentro da categoria correspondente.
+            categoria_do_descritivo = next(
+                (item for item in descritivo_list if item.get("categoria") == categoria_padronizada),
+                None
+            )
+
+            if categoria_do_descritivo and "subcategorias" in categoria_do_descritivo:
+                for item_sub_desc in categoria_do_descritivo["subcategorias"]:
+                    item_desc_subcategoria_name = item_sub_desc.get("subcategoria")
+
+                    # ADD THESE PRINT STATEMENTS for debugging
+                    print(f"Comparing SUB: target_cat='{target_categoria_padded}' (found in descritivo_list)")
+                    print(f"Comparing SUB: target_sub='{target_subcategoria_padded}' vs item_desc_sub_name='{item_desc_subcategoria_name}'")
+                    print(f"Types SUB: target_sub={type(target_subcategoria_padded)}, item_desc_sub_name={type(item_desc_subcategoria_name)}")
+
+
+                    if item_desc_subcategoria_name == target_subcategoria_padded:
+                        descricao_subcategoria = item_sub_desc["descricao"]
+                        found_match_in_descritivo = True
+                        break
+
+            if not found_match_in_descritivo:
+                print(f"WARNING: No description found for category '{target_categoria_padded}' and subcategory '{target_subcategoria_padded}'")
+
 
             conteudo += f"%-------------- INÍCIO DA SUBCATEGORIA {subcategoria_formatada} --------------\n"
             conteudo += f"\\subsubsection{{{subcategoria_formatada}}}\n{escape_latex(descricao_subcategoria)}\n\n"
@@ -412,14 +437,6 @@ def gerar_conteudo_latex_para_vulnerabilidades(
             conteudo += f"%-------------- FIM DA SUBCATEGORIA {subcategoria_formatada} --------------\n"
 
         conteudo += f"%-------------- FIM DA CATEGORIA {categoria_formatada} --------------\n"
-
-    #if vulnerabilidades_sem_categoria:
-    #    conteudo += "%-------------- INÍCIO DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
-    #    conteudo += "\\section{Vulnerabilidades sem Categoria}\n\\begin{itemize}\n"
-    #    for vuln_nome in vulnerabilidades_sem_categoria:
-    #        conteudo += f"    \\item \\texttt{{{escape_latex(vuln_nome)}}}\n"
-    #    conteudo += "\\end{itemize}\n"
-    #    conteudo += "%-------------- FIM DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
 
     if anexo_conteudo:
         conteudo += "%-------------- INÍCIO DO ANEXO A --------------\n"
