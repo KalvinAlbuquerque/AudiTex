@@ -8,6 +8,7 @@ html, body {
   overflow: hidden; /* Impede a rolagem principal da página */
   margin: 0;
   padding: 0;
+  font-size: 1.3rem;
 }
 
 /* Estilização da barra de rolagem para navegadores Webkit (Chrome, Safari, Edge) */
