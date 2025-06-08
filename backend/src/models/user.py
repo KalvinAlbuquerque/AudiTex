@@ -1,25 +1,28 @@
 # backend/src/models/user.py
 
 from typing import Dict, Any
-import bcrypt # Para hash de senhas
+# import bcrypt # Para hash de senhas # Commented out bcrypt import
 
 class User:
     def __init__(self, login: str, password: str, name: str, email: str, profile: str, _id: Any = None):
         self.login = login
-        self.password = self._hash_password(password) # Armazena a senha como hash
+        # self.password = self._hash_password(password) # Armazena a senha como hash # Commented out hashing
+        self.password = password # Armazena a senha em texto plano (TEMPORARIAMENTE PARA DEBUG)
         self.name = name
         self.email = email
         self.profile = profile # 'User' ou 'Administrator'
         self._id = _id # Para armazenar o ObjectId do MongoDB
 
-    def _hash_password(self, password: str) -> str:
-        """Gera o hash da senha usando bcrypt."""
-        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        return hashed.decode('utf-8')
+    # def _hash_password(self, password: str) -> str:
+    #     """Gera o hash da senha usando bcrypt."""
+    #     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    #     return hashed.decode('utf-8')
 
     def check_password(self, password: str) -> bool:
-        """Verifica se a senha fornecida corresponde ao hash armazenado."""
-        return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
+        """Verifica se a senha fornecida corresponde ao hash armazenado.
+           ATENÇÃO: Com o hashing desativado, esta função fará uma comparação direta."""
+        # return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8')) # Original bcrypt check
+        return password == self.password # Comparação direta para debug sem hashing
 
     def to_dict(self) -> Dict[str, Any]:
         """Converte o objeto User em um dicionário, excluindo a senha para retorno seguro."""
@@ -39,12 +42,10 @@ class User:
         # Ao carregar do DB, a senha já estará em hash, então não chamamos _hash_password novamente
         user_obj = cls(
             login=data["login"],
-            password=data["password"], # Assumimos que a senha aqui já é o hash
+            password=data["password"], # Assumimos que a senha aqui já é o hash/texto plano
             name=data["name"],
             email=data["email"],
             profile=data["profile"],
             _id=data.get("_id")
         )
-        # Se a senha não for um hash (e.g., uma nova senha para update), ela precisaria ser hashed.
-        # Mas para o from_dict, é geralmente para carregar o estado atual do DB.
         return user_obj

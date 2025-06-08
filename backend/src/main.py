@@ -39,44 +39,40 @@ app.static_url_path = '/backend_assets'
 
 # --- NOVO: Lógica para criar usuário admin da APLICAÇÃO na coleção 'users', se vazia ---
 def create_default_admin_user_if_not_exists():
-    # HARDCODED PARA DEBUG - ESTE CÓDIGO FORÇA UMA CONSISTÊNCIA NO USUÁRIO 'admin'
-    # Ele DELETA e RECria o usuário 'admin' a cada inicialização do Flask.
-    # NÃO USAR EM PRODUÇÃO!
-    
     db_instance = Database()
     try:
         admin_login = "admin"
         admin_password = "admin" # Senha hardcoded
 
-        # Sempre tenta deletar o usuário existente para garantir um estado limpo
+        # Only create if user does NOT exist
         existing_user = db_instance.find_one("users", {"login": admin_login})
-        if existing_user:
-            db_instance.delete_one("users", {"login": admin_login})
-            print(f"Usuário existente '{admin_login}' deletado para recriação.")
+        if not existing_user: # This line ensures creation only if not found
+            print("Criando usuário administrador padrão da aplicação...")
 
-        print("Criando/Recriando usuário administrador padrão da aplicação...")
-        
-        new_admin_user = User(
-            login=admin_login,
-            password=admin_password, # A senha 'admin' será hasheada AQUI
-            name=os.getenv("DEFAULT_ADMIN_NAME", "Administrador Teste"), # Pega do env ou default
-            email=os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com"), # Pega do env ou default
-            profile="Administrator"
-        )
-        
-        db_instance.insert_one("users", {
-            "login": new_admin_user.login,
-            "password": new_admin_user.password, # O hash gerado será salvo AQUI
-            "name": new_admin_user.name,
-            "email": new_admin_user.email,
-            "profile": new_admin_user.profile
-        })
-        print(f"Usuário administrador da aplicação '{new_admin_user.login}' criado com sucesso na coleção 'users'.")
-        print(f"HASH DA SENHA SALVA PARA '{new_admin_user.login}': {new_admin_user.password}") # IMPRIME o hash que acabou de ser salvo
+            new_admin_user = User(
+                login=admin_login,
+                password=admin_password, # A senha 'admin' será hasheada AQUI
+                name=os.getenv("DEFAULT_ADMIN_NAME", "Administrador Teste"),
+                email=os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com"),
+                profile="Administrator"
+            )
+
+            db_instance.insert_one("users", {
+                "login": new_admin_user.login,
+                "password": new_admin_user.password, # O hash gerado será salvo AQUI
+                "name": new_admin_user.name,
+                "email": new_admin_user.email,
+                "profile": new_admin_user.profile
+            })
+            print(f"Usuário administrador da aplicação '{new_admin_user.login}' criado com sucesso na coleção 'users'.")
+            print(f"HASH DA SENHA SALVA PARA '{new_admin_user.login}': {new_admin_user.password}")
+        else:
+            print(f"Usuário '{admin_login}' já existe, não será recriado.")
     except Exception as e:
-        print(f"Erro ao tentar criar/recriar usuário administrador padrão da aplicação: {e}")
+        print(f"Erro ao tentar criar usuário administrador padrão da aplicação: {e}")
     finally:
         db_instance.close()
+
 
 # Executa a configuração inicial do banco de dados da aplicação quando o Flask inicia
 with app.app_context():
