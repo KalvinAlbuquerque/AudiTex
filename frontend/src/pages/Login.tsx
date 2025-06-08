@@ -97,9 +97,7 @@ function Login() {
                             {loading ? <ClipLoader size={20} color={"#fff"} /> : 'Entrar'}
                         </button>
                     </form>
-                    <p className="text-center text-gray-600 mt-4">
-                        Não tem uma conta? <Link to="/register" className="text-[#007BB4] hover:underline">Registre-se aqui</Link>
-                    </p>
+
                 </div>
             </div>
             <ToastContainer />

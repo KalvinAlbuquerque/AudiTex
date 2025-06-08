@@ -18,7 +18,6 @@ import PesquisarScanVM from './pages/PesquisarScanVM';
 import GerenciarVulnerabilidades from './pages/GerenciarVulnerabilidades';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import Login from './pages/Login';
-import Register from './pages/Register';
 
 import AuthGuard from './components/AuthGuard.tsx';
 import Layout from './components/Layout.tsx'; // NOVO: Importe o componente Layout
@@ -36,7 +35,6 @@ function App() {
                     element={user ? <Navigate to="/home" replace /> : <Login />}
                 />
                 <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
 
                 {/* Rotas protegidas (exigem autenticação e usam o Layout) */}
                 {/* Aqui, o AuthGuard envolve o Layout, que por sua vez envolve o componente da página */}

@@ -108,14 +108,6 @@ function Header() { // Removendo a prop isTransparent
                                     Login
                                 </button>
                             </li>
-                            <li>
-                                <button
-                                    onClick={() => navigate('/register')}
-                                    className={`${textColorClass} ${linkHoverClass} transition duration-300 ease-in-out`}
-                                >
-                                    Register
-                                </button>
-                            </li>
                         </>
                     )}
                 </ul>
