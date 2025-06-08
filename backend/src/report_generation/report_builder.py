@@ -212,33 +212,62 @@ def escape_path_for_latex(path_str: str) -> str:
     - Converte barras invertidas para barras normais.
     - Translitera caracteres acentuados para ASCII.
     - Substitui espaços por hífens.
-    - Escapa caracteres LaTeX problemáticos em nomes de arquivo/caminhos (como '_', '%', '#', '$', '&', '~', '^', '{', '}').
+    - Escapa caracteres LaTeX problemáticos em nomes de arquivo/caminhos.
+    - Garante uma extensão de imagem válida e trata pontos dentro da parte do nome do arquivo.
     """
     if not isinstance(path_str, str):
         return path_str
 
-    # 1. Normaliza os separadores de caminho (Windows para Unix-like)
+    # Normaliza os separadores de caminho (Windows para Unix-like)
     path_str = path_str.replace('\\', '/')
 
+    # Divide o caminho em diretório e nome base do arquivo
+    dir_name, base_name = os.path.split(path_str)
+
+    # 1. Limpa possíveis hífens ou caracteres malformados que antecedem a extensão
+    # Ex: 'image.png-' -> 'image.png'
+    base_name = re.sub(r'-(?=\.(png|jpg|jpeg|gif|pdf)$)', '', base_name, flags=re.IGNORECASE)
+    base_name = base_name.rstrip('-') # Remove outros hífens no final
+
     # 2. Translitera caracteres acentuados para ASCII (ex: 'Configurações' -> 'Configuracoes')
-    path_str = unicodedata.normalize('NFKD', path_str).encode('ascii', 'ignore').decode('utf-8')
+    base_name = unicodedata.normalize('NFKD', base_name).encode('ascii', 'ignore').decode('utf-8')
 
-    # 3. Substitui espaços por hífens (comum em URLs e nomes de arquivo para evitar problemas)
-    path_str = path_str.replace(' ', '-')
+    # 3. Substitui espaços por hífens
+    base_name = base_name.replace(' ', '-')
 
-    # 4. Escapa caracteres LaTeX especiais que podem aparecer em caminhos de arquivo
-    # A ordem é importante para não escapar algo que já foi parte de um escape
-    path_str = path_str.replace('_', '\\_') # _ é operador de subscrito no LaTeX, deve ser escapado
-    path_str = path_str.replace('%', '\\%') # % é um comentário, deve ser escapado
-    path_str = path_str.replace('#', '\\#') # # é um marcador de seção, deve ser escapado
-    path_str = path_str.replace('$', '\\$') # $ é para modo matemático, deve ser escapado
-    path_str = path_str.replace('&', '\\&') # & é para alinhamento, deve ser escapado
-    path_str = path_str.replace('~', '\\textasciitilde{}') # ~ para espaço não quebrável
-    path_str = path_str.replace('^', '\\textasciicircum{}') # ^ para sobrescrito
-    path_str = path_str.replace('{', '\\{') # { } para agrupamento
-    path_str = path_str.replace('}', '\\}') # { } para agrupamento
-    
-    return path_str
+    # 4. Garante uma extensão de arquivo apropriada e lida com pontos dentro do nome do arquivo
+    filename_stem, ext = os.path.splitext(base_name)
+    valid_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.pdf']
+
+    if ext and ext.lower() in valid_extensions:
+        # Se uma extensão válida for encontrada, mantém-na
+        final_ext = ext.lower()
+        # Substitui quaisquer outros pontos no 'filename_stem' por hífens
+        filename_stem = filename_stem.replace('.', '-')
+    else:
+        # Se nenhuma extensão válida for encontrada, ou for uma "extensão falsa" como ".0-pollution",
+        # substitui todos os pontos no 'base_name' original por hífens e adiciona .png
+        filename_stem = base_name.replace('.', '-')
+        final_ext = ".png"
+
+    # Reconstrói o nome base do arquivo limpo
+    base_name_cleaned = filename_stem + final_ext
+
+    # 5. Escapa caracteres especiais do LaTeX no caminho completo (incluindo o diretório)
+    # Reúne o diretório e o nome base limpo para o caminho completo antes do escape final
+    full_path_cleaned = os.path.join(dir_name, base_name_cleaned).replace('\\', '/')
+
+    # Escapa caracteres especiais do LaTeX
+    full_path_escaped = full_path_cleaned.replace('_', '\\_')
+    full_path_escaped = full_path_escaped.replace('%', '\\%')
+    full_path_escaped = full_path_escaped.replace('$', '\\$')
+    full_path_escaped = full_path_escaped.replace('&', '\\&')
+    full_path_escaped = full_path_escaped.replace('~', '\\textasciitilde{}')
+    full_path_escaped = full_path_escaped.replace('^', '\\textasciicircum{}')
+    full_path_escaped = full_path_escaped.replace('{', '\\{')
+    full_path_escaped = full_path_escaped.replace('}', '\\}')
+
+    return full_path_escaped
 
 def gerar_conteudo_latex_para_vulnerabilidades(
     vulnerabilidades_do_relatorio_txt: List[Dict[str, Any]],
@@ -246,12 +275,6 @@ def gerar_conteudo_latex_para_vulnerabilidades(
     descritivo_vulnerabilidades_json: Dict[str, Any],
     tipo_vulnerabilidade: str
 ) -> str:
-    """
-    Gera o conteúdo em LaTeX para as vulnerabilidades.
-    """
-    def padronizar(texto: str) -> str:
-        return texto.strip().lower() if texto else ""
-
     conteudo = ""
     anexo_conteudo = ""
     categorias_agrupadas: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
@@ -271,9 +294,9 @@ def gerar_conteudo_latex_para_vulnerabilidades(
             subcategoria_original = dados_vuln.get("Subcategoria", "Outras")
             descricao = dados_vuln.get("Descrição", "Descrição não disponível.")
             solucao = dados_vuln.get("Solução", "Solução não disponível.")
-            imagem = dados_vuln.get("Imagem", "") # Imagem vem do JSON (não é limpo pelo script de higienização), será escapada aqui
-            categoria_pad = padronizar(categoria_original)
-            subcategoria_pad = padronizar(subcategoria_original)
+            imagem = dados_vuln.get("Imagem", "")
+            categoria_pad = categoria_original
+            subcategoria_pad = subcategoria_original
             categorias_formatadas[categoria_pad] = categoria_original
             categorias_formatadas[subcategoria_pad] = subcategoria_original
             if categoria_pad not in categorias_agrupadas:
@@ -297,7 +320,7 @@ def gerar_conteudo_latex_para_vulnerabilidades(
             vulnerabilidades_sem_categoria.append(vulnerabilidade_nome)
 
     categorias_ordenadas = sorted(categorias_agrupadas.keys(), key=lambda x: categorias_formatadas.get(x, x))
-    outras_criticas_key = padronizar("Outras Vulnerabilidades Críticas e Explorações")
+    outras_criticas_key = "Outras Vulnerabilidades Críticas e Explorações"
     if outras_criticas_key in categorias_ordenadas:
         categorias_ordenadas.remove(outras_criticas_key)
         categorias_ordenadas.append(outras_criticas_key)
@@ -306,34 +329,39 @@ def gerar_conteudo_latex_para_vulnerabilidades(
         categoria_formatada = categorias_formatadas.get(categoria_padronizada, categoria_padronizada)
         descricao_categoria = next(
             (item["descricao"] for item in descritivo_list
-             if padronizar(item.get("categoria")) == categoria_padronizada and "subcategoria" not in item),
+             if item.get("categoria") == categoria_padronizada and "subcategoria" not in item),
             "Descrição não disponível."
         )
         conteudo += f"%-------------- INÍCIO DA CATEGORIA {categoria_formatada} --------------\n"
-        # Aplica escape_latex aqui pois descricao_categoria vem agora como texto puro do JSON limpo
         conteudo += f"\\subsection{{{categoria_formatada}}}\n{escape_latex(descricao_categoria)}\n\n"
 
         subcategorias = categorias_agrupadas.get(categoria_padronizada, {})
         for subcategoria_padronizada in sorted(subcategorias.keys(), key=lambda x: categorias_formatadas.get(x, x)):
             subcategoria_formatada = categorias_formatadas.get(subcategoria_padronizada, subcategoria_padronizada)
-            descricao_subcategoria = next(
-                (item["descricao"] for item in descritivo_list
-                 if padronizar(item.get("categoria")) == categoria_padronizada and
-                    padronizar(item.get("subcategoria")) == subcategoria_padronizada),
-                "Descrição não disponível."
-            )
+            
+            descricao_subcategoria = "Descrição não disponível."
+            target_categoria_padded = categoria_formatada
+            target_subcategoria_padded = subcategoria_formatada
+
+            for item_desc in descritivo_list:
+                item_desc_categoria_padded = item_desc.get("categoria")
+                item_desc_subcategoria_padded = item_desc.get("subcategoria")
+
+                if item_desc_categoria_padded == target_categoria_padded and \
+                   item_desc_subcategoria_padded == target_subcategoria_padded:
+                    descricao_subcategoria = item_desc["descricao"]
+                    found_match_in_descritivo = True
+                    break
+
             conteudo += f"%-------------- INÍCIO DA SUBCATEGORIA {subcategoria_formatada} --------------\n"
-            # Aplica escape_latex aqui pois descricao_subcategoria vem agora como texto puro do JSON limpo
             conteudo += f"\\subsubsection{{{subcategoria_formatada}}}\n{escape_latex(descricao_subcategoria)}\n\n"
             conteudo += "\\begin{enumerate}\n"
 
             vulns_ordenadas = sorted(subcategorias[subcategoria_padronizada], key=lambda x: x['Vulnerabilidade'])
             for v in vulns_ordenadas:
                 conteudo += f"%-------------- INÍCIO DA VULNERABILIDADE {v['Vulnerabilidade']} --------------\n"
-                # Aplica escape_latex aqui pois Vulnerabilidade vem agora como texto puro do JSON limpo
                 conteudo += f"\\item \\textbf{{\\texttt{{{escape_latex(v['Vulnerabilidade'])}}}}}\n"
                 if v["Imagem"]:
-                    # O campo 'Imagem' precisa ser escapado para o LaTeX aqui no report_builder.py
                     caminho_imagem_latex = escape_path_for_latex(v["Imagem"])
                     conteudo += (
                         r"""
@@ -344,9 +372,7 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                         \FloatBarrier
                         """
                     )
-                # Aplica escape_latex aqui pois Descricao vem agora como texto puro do JSON limpo
                 conteudo += f"\\textbf{{Descrição:}} {escape_latex(v['Descricao'])}\n\n"
-                # Aplica escape_latex aqui pois Solucao vem agora como texto puro do JSON limpo
                 conteudo += f"\\textbf{{Solução:}} {escape_latex(v['Solucao'])}\n\n"
 
                 if tipo_vulnerabilidade == "webapp":
@@ -361,8 +387,6 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                 if len(instancias_afetadas) > 10:
                     conteudo += f"\\textbf{{{label_instancias} (parcial):}}\n\\begin{{itemize}}\n"
                     for instancia in instancias_afetadas[:10]:
-                        # \url{} geralmente lida bem com caracteres especiais de URL;
-                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         conteudo += f"    \\item \\url{{{instancia}}}\n"
                     conteudo += "\\end{itemize}\n"
                     conteudo += (
@@ -375,15 +399,11 @@ def gerar_conteudo_latex_para_vulnerabilidades(
                     anexo_conteudo += f"\\subsubsection*{{{conteudo_anexo_vuln_nome} }}\n"
                     anexo_conteudo += "\\begin{multicols}{3}\n\\small\n\\begin{itemize}\n"
                     for instancia in instancias_afetadas:
-                        # \url{} geralmente lida bem com caracteres especiais de URL;
-                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         anexo_conteudo += f"    \\item \\url{{{instancia}}}\n"
                     anexo_conteudo += "\\end{itemize}\n\\end{multicols}\n\n"
                 else:
                     conteudo += f"\\textbf{{{label_instancias}:}}\n\\begin{{itemize}}\n"
                     for instancia in instancias_afetadas:
-                        # \url{} geralmente lida bem com caracteres especiais de URL;
-                        # não aplicamos escape_latex diretamente aqui para não quebrar a URL.
                         conteudo += f"    \\item \\url{{{instancia}}}\n"
                     conteudo += "\\end{itemize}\n\n"
                 conteudo += f"%-------------- FIM DA VULNERABILIDADE {v['Vulnerabilidade']} --------------\n"
@@ -393,14 +413,13 @@ def gerar_conteudo_latex_para_vulnerabilidades(
 
         conteudo += f"%-------------- FIM DA CATEGORIA {categoria_formatada} --------------\n"
 
-    if vulnerabilidades_sem_categoria:
-        conteudo += "%-------------- INÍCIO DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
-        conteudo += "\\section{Vulnerabilidades sem Categoria}\n\\begin{itemize}\n"
-        for vuln_nome in vulnerabilidades_sem_categoria:
-            # Aplica escape_latex aqui pois vuln_nome vem agora como texto puro do JSON limpo
-            conteudo += f"    \\item \\texttt{{{escape_latex(vuln_nome)}}}\n"
-        conteudo += "\\end{itemize}\n"
-        conteudo += "%-------------- FIM DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
+    #if vulnerabilidades_sem_categoria:
+    #    conteudo += "%-------------- INÍCIO DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
+    #    conteudo += "\\section{Vulnerabilidades sem Categoria}\n\\begin{itemize}\n"
+    #    for vuln_nome in vulnerabilidades_sem_categoria:
+    #        conteudo += f"    \\item \\texttt{{{escape_latex(vuln_nome)}}}\n"
+    #    conteudo += "\\end{itemize}\n"
+    #    conteudo += "%-------------- FIM DAS VULNERABILIDADES SEM CATEGORIA --------------\n"
 
     if anexo_conteudo:
         conteudo += "%-------------- INÍCIO DO ANEXO A --------------\n"
@@ -469,9 +488,9 @@ def montar_conteudo_latex_csv(
     """
     try:
         vulnerabilidades_do_txt_csv = carregar_vulnerabilidades_do_relatorio_csv(caminho_relatorio_txt_servers)
-        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
+        
         vulnerabilidades_dados_json = carregar_json_utf(caminho_dados_vulnerabilidades_servers_json)
-        # Carrega o JSON LIMPO (SEM O _cleaned.json, pois o usuário manteve o mesmo nome)
+        
         descritivo_json = carregar_json_utf(caminho_descritivo_servers_json)
 
         conteudo_latex_final = gerar_conteudo_latex_para_vulnerabilidades(

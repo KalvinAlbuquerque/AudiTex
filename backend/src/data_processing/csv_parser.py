@@ -83,8 +83,3 @@ def extrair_hosts_csv(csv_files: List[str]) -> List[str]:
 
     return list(hosts)
 
-# REMOVIDA: A função montar_conteudo_latex_csv foi movida para report_builder.py.
-# REMOVIDA: A função carregar_descritivo_vulnerabilidades_csv foi movida para report_builder.py.
-# REMOVIDA: A função carregar_vulnerabilidades_do_relatorio_csv foi movida para report_builder.py.
-# REMOVIDA: A função gerar_latex_vulnerabilidades foi movida para report_builder.py.
-# REMOVIDA: A função gerar_conteudo_latex_para_vulnerabilidades_csv foi movida para report_builder.py.

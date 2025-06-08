@@ -69,7 +69,7 @@
         "Vulnerabilidade": "HTTPS Not Detected",
         "Descrição": "O HTTPS é um protocolo que protege a integridade e a confidencialidade dos dados entre o cliente e o servidor. O uso do HTTPS é altamente recomendado para proteger as conexões com o site, independentemente do tipo de conteúdo.",
         "Solução": "Habilite o HTTPS seguindo as melhores práticas.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-de-seguranca-http-e-tls/https-not-detected"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-de-seguranca-http-e-tls/https-not-detected.png"
     },
     {
         "Categoria": "Vulnerabilidades Relacionadas a Configurações de Segurança HTTP E TLS",
@@ -77,7 +77,7 @@
         "Vulnerabilidade": "Mixed Resource Detection",
         "Descrição": "O scanner descobriu que o site afetado está utilizando tanto HTTP quanto HTTPS. Embora o código HTML seja servido via HTTPS, o servidor também está fornecendo recursos por um canal não criptografado, o que pode comprometer os dados, ao mesmo tempo que oferece uma falsa sensação de segurança ao usuário.",
         "Solução": "Todas as páginas e/ou recursos no site afetado devem ser igualmente protegidos, utilizando os protocolos de criptografia mais seguros e recentes, como TLS 1.2 e TLS 1.3.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-de-seguranca-http-e-tls/mixed-resource-detection"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-de-seguranca-http-e-tls/mixed-resource-detection.png"
     },
     {
         "Categoria": "Vulnerabilidades Relacionadas a Configurações de Segurança HTTP E TLS",
@@ -157,7 +157,7 @@
         "Vulnerabilidade": "SSL/TLS Forward Secrecy Cipher Suites Not Supported",
         "Descrição": "O host remoto utiliza pelo menos uma cifra SSL/TLS que não oferece segredo perfeito (FS), também conhecido como segredo perfeito de avanço (PFS). Essa é uma característica que garante que as chaves de sessão não serão comprometidas mesmo que a chave privada do servidor seja comprometida.",
         "Solução": "Reconfigure o servidor para desabilitar as cifras sem segredo perfeito e mantenha apenas as cifras que oferecem segredo perfeito (cifras baseadas em ECDHE ou DHE).",
-        "Imagem": "assets/images-was/protocolos-e-cifragem/ssl-tls-forward-secrecy-cipher-suites-not-supported"
+        "Imagem": "assets/images-was/protocolos-e-cifragem/ssl-tls-forward-secrecy-cipher-suites-not-supported.png"
     },
     {
         "Categoria": "Vulnerabilidades em Cookies e Segurança de Sessão",
@@ -189,7 +189,7 @@
         "Vulnerabilidade": "jQuery 1.2.0 < 3.5.0 Cross-Site Scripting",
         "Descrição": "De acordo com o número de versão autodeclarado, a versão do jQuery da aplicação é pelo menos 1.2.0 e anterior à 3.5.0. Nesse intervalo de versões, o jQuery pode ser vulnerável a um ataque de Cross-Site Scripting (XSS) devido a uma falha na operação de regex na função jQuery.htmlPrefilter. Essa falha pode ser explorada por um atacante para injetar e executar código JavaScript malicioso no contexto do navegador de um usuário, comprometendo a segurança da aplicação e dos dados do usuário.\nVale ressaltar que o scanner não realizou um teste direto para identificar essa vulnerabilidade, mas confiou exclusivamente na versão informada pela aplicação.",
         "Solução": "A solução para essa vulnerabilidade é atualizar o jQuery para a versão 3.5.0 ou posterior, que resolve a falha de segurança relacionada ao htmlPrefilter. Essa atualização garantirá que a aplicação esteja protegida contra essa vulnerabilidade de XSS.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/cross-site-scriptingxss/jquery-120-inferior-a-350-cross-site-scripting.png-"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/cross-site-scriptingxss/jquery-120-inferior-a-350-cross-site-scripting.png"
     },
     {
         "Categoria": "Vulnerabilidades Relacionadas a Injeção de Código",
@@ -197,7 +197,7 @@
         "Vulnerabilidade": "Bootstrap 4.x \\textless 4.3.1 Cross-Site Scripting",
         "Descrição": "De acordo com o número de versão autodeclarado, a versão do Bootstrap da aplicação é 3.x anterior à 3.4.1 ou 4.x anterior à 4.3.1. Nesse intervalo de versões, o Bootstrap pode ser vulnerável a um ataque de Cross-Site Scripting (XSS) devido ao uso do atributo data-template nos plugins de tooltip e popover. Essa falha pode permitir que um atacante injete código malicioso através do uso do atributo data-template, comprometendo a segurança da aplicação e permitindo a execução de scripts não autorizados no navegador do usuário.\nVale ressaltar que o scanner não realizou um teste direto para identificar essa vulnerabilidade, mas confiou exclusivamente na versão informada pela aplicação.",
         "Solução": "Para mitigar essa vulnerabilidade, recomenda-se atualizar o Bootstrap para a versão 4.3.1 ou superior. As versões mais recentes corrigem essa falha, prevenindo a injeção de código malicioso nos elementos de tooltip e popover.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/cross-site-scriptingxss/bootstrap-4x-inferior-431-cross-site-scripting.png-"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/cross-site-scriptingxss/bootstrap-4x-inferior-431-cross-site-scripting.png"
     },
     {
         "Categoria": "Vulnerabilidades Relacionadas a Injeção de Código",
@@ -261,7 +261,7 @@
         "Vulnerabilidade": "Blind SQL Injection (differential analysis)",
         "Descrição": "Devido à necessidade de conteúdo dinâmico nas aplicações web atuais, muitas dependem de um banco de dados para armazenar dados que serão recuperados e processados pela aplicação web (ou outros programas). As aplicações web recuperam dados do banco de dados utilizando consultas em Structured Query Language (SQL).\nPara atender à demanda de muitos desenvolvedores, servidores de banco de dados (como MSSQL, MySQL, Oracle, etc.) possuem funcionalidades adicionais integradas que podem permitir controle extensivo sobre o banco de dados e interação com o sistema operacional do host.\nUma injeção SQL ocorre quando um valor originado da requisição do cliente é utilizado dentro de uma consulta SQL sem a devida sanitização. Isso poderia permitir que cibercriminosos executem códigos SQL arbitrários, roubem dados ou utilizem as funcionalidades adicionais do servidor de banco de dados para assumir o controle de mais componentes do servidor.\nA exploração bem-sucedida de uma injeção SQL pode ser devastadora para uma organização e é uma das vulnerabilidades mais exploradas em aplicações web.\nEsta injeção foi detectada quando o scanner foi capaz de injetar consultas SQL específicas, que, se vulneráveis, resultam em respostas para cada injeção que são diferentes. Isso é conhecido como vulnerabilidade de injeção SQL cega (blind SQL injection).",
         "Solução": "O único método comprovado para prevenir ataques de injeção SQL enquanto ainda mantém a funcionalidade completa da aplicação é utilizar consultas parametrizadas (também conhecidas como instruções preparadas). Ao utilizar esse método para consultar o banco de dados, qualquer valor fornecido pelo cliente será tratado como um valor de string em vez de parte da consulta SQL.\nAlém disso, ao utilizar consultas parametrizadas, o mecanismo do banco de dados verificará automaticamente se a string utilizada corresponde ao tipo da coluna. Por exemplo, o mecanismo do banco de dados verificará se a entrada fornecida pelo usuário é um número inteiro, caso a coluna do banco de dados tenha sido configurada para conter números inteiros.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/sql-injection/blind-sql-injection-differential-analysis"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-injecao-de-codigo/sql-injection/blind-sql-injection-differential-analysis.png"
     },
     {
         "Categoria": "Vulnerabilidades Relacionadas a Injeção de Código",
@@ -405,7 +405,7 @@
         "Vulnerabilidade": "Secret Data Disclosure",
         "Descrição": "A maioria das aplicações web depende de vários serviços públicos para fornecer funcionalidades aos seus usuários. Em designs seguros, o consumo desses serviços privados ou em nuvem exige autenticação, como chaves de API, credenciais baseadas em nome de usuário e senha, e dados sensíveis semelhantes.\nNo entanto, os desenvolvedores às vezes codificam esses dados em vários pontos de suas aplicações, sem perceber que isso pode se tornar publicamente disponível, por exemplo, em JavaScript no lado do cliente ou até mesmo em comentários HTML. Ao explorar essas informações sensíveis, um atacante remoto e não autenticado poderia obter acesso privilegiado aos serviços críticos utilizados pela aplicação web e pela organização.",
         "Solução": "Remova a exposição de dados secretos identificando a causa raiz do problema (por exemplo, inserção manual de dados no código ou variáveis de ambiente agrupadas no JavaScript do front-end). Gire os segredos para evitar o uso posterior caso tenham sido previamente obtidos por um ator malicioso.",
-        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-e-exposicao-de-informacoes/exposicao-de-codigo-e-recursos/secret-data-disclosure"
+        "Imagem": "assets/images-was/vulnerabilidades-relacionadas-a-configuracoes-e-exposicao-de-informacoes/exposicao-de-codigo-e-recursos/secret-data-disclosure.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
@@ -493,7 +493,7 @@
         "Vulnerabilidade": "PHP 7.0.x \\textless 7.0.33 Multiple Vulnerabilities",
         "Descrição": "De acordo com o banner, a versão do PHP em execução no servidor web remoto é 5.6.x anterior a 5.6.39, 7.0.x anterior a 7.0.33, 7.1.x anterior a 7.1.25, 7.2.x anterior a 7.2.13 ou 7.3.x anterior a 7.3.0. Portanto, ela é afetada por múltiplas vulnerabilidades:\n- Uma vulnerabilidade de injeção de comando arbitrário existe na função imap_open devido a filtros inadequados para nomes de caixa de correio antes de passá-los para os comandos rsh ou ssh. Um atacante remoto autenticado pode explorar isso enviando um nome de servidor IMAP especialmente criado para causar a execução de comandos arbitrários no sistema alvo. (CVE-2018-19518)\n- Uma vulnerabilidade de leitura além do buffer na função phar_parse_pharfile. Um atacante remoto não autenticado pode explorar isso para ler memória alocada ou não alocada além dos dados reais ao tentar analisar um arquivo .phar. (CVE-2018-20783)\n- Um erro de desreferenciação de ponteiro NULL no Windows. Um atacante remoto não autenticado pode explorar isso para travar a aplicação e causar uma negação de serviço. (CVE-2018-19395)\nObserve que o scanner não testou diretamente essas questões, confiando apenas no número da versão informado pela aplicação.",
         "Solução": "Atualize para a versão 7.0.33 ou posterior do PHP",
-        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/php-70x-inferior-70.33-multiple-vulnerabilities"
+        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/php-70x-inferior-70.33-multiple-vulnerabilities.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
@@ -501,7 +501,7 @@
         "Vulnerabilidade": "jQuery < 3.4.0 Prototype Pollution",
         "Descrição": "De acordo com o número de versão informado, o jQuery está em uma versão anterior à 3.4.0. Portanto, ele pode ser afetado por uma vulnerabilidade de poluição de protótipo devido à função 'extend', que pode ser enganada para modificar o protótipo de 'Object'.\nObserve que o scanner não testou diretamente essas questões, confiando apenas no número da versão informado pela aplicação.",
         "Solução": "Atualize para a versão 3.4.0 ou posterior do jQuery.",
-        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/jquery-inferior-34.0-prototype-pollution"
+        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/jquery-inferior-34-0-prototype-pollution.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
@@ -509,7 +509,7 @@
         "Vulnerabilidade": "Bootstrap 3.x \\textless 3.4.1 Cross-Site Scripting",
         "Descrição": "De acordo com o número de versão informado, o Bootstrap é 3.x anterior a 3.4.1 ou 4.x anterior a 4.3.1. Portanto, pode ser afetado por uma vulnerabilidade de Cross-Site Scripting (XSS) através do atributo data-template nos plugins de tooltip e popover.\nObserve que o scanner não testou diretamente essas questões, confiando apenas no número da versão informado pela aplicação.",
         "Solução": "Atualize para a versão 3.4.1 ou posterior do Bootstrap.",
-        "Imagem": "ssets/images-was/Outras-Vulnerabilidades-Criticas-e-Exploracoes/Versoes-Antigas-e-Falhas-de-Plugins/Bootstrap-3.x-inferior-3.4.1-Cross-Site-Scripting"
+        "Imagem": "ssets/images-was/Outras-Vulnerabilidades-Criticas-e-Exploracoes/Versoes-Antigas-e-Falhas-de-Plugins/Bootstrap-3-x-inferior-3-4-1-Cross-Site-Scripting.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
@@ -517,7 +517,7 @@
         "Vulnerabilidade": "jQuery UI \\textless 1.13.2 Cross-Site Scripting",
         "Descrição": "De acordo com o número de versão informado, o jQuery UI está em uma versão anterior à 1.13.2. Portanto, ele pode ser afetado por uma vulnerabilidade de Cross-Site Scripting (XSS) ao atualizar um checkboxradio com um rótulo de texto inicial semelhante a HTML (CVE-2022-31160).\nObserve que o scanner não testou diretamente essas questões, confiando apenas no número da versão informado pela aplicação.",
         "Solução": "Atualize para a versão 1.13.2 ou posterior do jQuery UI.",
-        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/jquery-ui-inferior-113.2-cross-site-scripting"
+        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/jquery-ui-inferior-113.2-cross-site-scripting.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
@@ -525,7 +525,7 @@
         "Vulnerabilidade": "Moment.js \\textless 2.19.3 Regular Expression Denial of Service",
         "Descrição": "De acordo com o número de versão informado, o Moment.js está em uma versão anterior à 2.19.3. Portanto, ele pode ser afetado por uma vulnerabilidade de negação de serviço por meio de expressões regulares (ReDoS) ao processar datas como string.\nObserve que o scanner não testou diretamente essas questões, confiando apenas no número da versão informado pela aplicação.",
         "Solução": "Atualize para a versão 2.19.3 ou posterior do Moment.js.",
-        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/momentjs-inferior-219.3-regular-expression-denial-of-service"
+        "Imagem": "assets/images-was/outras-vulnerabilidades-criticas-e-exploracoes/versoes-antigas-e-falhas-de-plugins/momentjs-inferior-219-3-regular-expression-denial-of-service.png"
     },
     {
         "Categoria": "Outras Vulnerabilidades Críticas e Explorações",
