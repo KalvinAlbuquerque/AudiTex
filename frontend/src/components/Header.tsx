@@ -1,16 +1,10 @@
 // frontend/src/components/Header.tsx
-import  { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.tsx';
 import { toast } from 'react-toastify';
 
-// Remove a prop isTransparent, pois o header terá um estilo fixo
-// interface HeaderProps {
-//     isTransparent?: boolean;
-// }
-
-// function Header({ isTransparent = false }: HeaderProps) {
-function Header() { // Não recebe mais a prop isTransparent
+function Header() {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,19 +15,18 @@ function Header() { // Não recebe mais a prop isTransparent
         navigate('/login');
     };
 
-    // Estilo de fundo para o cabeçalho (sempre fundo.png)
     const headerBgStyle = {
         backgroundImage: "url('/assets/fundo.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'center',
     };
-    const textColorClass = 'text-white'; // Texto sempre branco
-    const linkHoverClass = 'hover:text-gray-300'; // Hover em tons de cinza claro
+    const textColorClass = 'text-white';
+    const linkHoverClass = 'hover:text-gray-300';
 
     return (
         <header
-            className="p-4 flex items-center justify-between z-10 relative" // Remova `absolute top-0 left-0 right-0` se estava
-            style={headerBgStyle} // Aplica a imagem de fundo aqui
+            className="p-4 flex items-center justify-between fixed top-0 w-full z-50" // Adicionado 'fixed top-0 w-full z-50'
+            style={headerBgStyle}
         >
             <div className="flex items-center space-x-4">
                 <img
@@ -80,7 +73,7 @@ function Header() { // Não recebe mais a prop isTransparent
                                 </button>
                                 
                                 {isMenuOpen && (
-                                    <ul className="absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20">
+                                    <ul className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20">
                                         {user.profile === 'Administrator' && (
                                             <>
                                                 <li>

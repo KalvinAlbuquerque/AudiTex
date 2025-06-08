@@ -3,6 +3,8 @@
 html, body {
   font-family: 'Source Sans Pro', 'sans-serif';
   background-color: #141723;
+  overflow-x: hidden; /* Mantido conforme sua última validação */
+  font-size: 1.3rem; /* Adicionado: Aumenta o tamanho da fonte base */
 }
 
 /* Estilização da barra de rolagem para navegadores Webkit (Chrome, Safari, Edge) */
