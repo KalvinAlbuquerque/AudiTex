@@ -58,6 +58,15 @@ export interface ReportGenerated {
     nome: string;
 }
 
+export interface UserData {
+    _id?: string; // Opcional, pois é gerado pelo MongoDB
+    login: string;
+    password?: string; // Opcional para leitura, mas necessário para registro
+    name: string;
+    email: string;
+    profile: 'User' | 'Administrator';
+}
+
 export const listsApi = {
     getAllLists: async (): Promise<Lista[]> => {
         const response = await api.get('/lists/getTodasAsListas/');
@@ -211,6 +220,28 @@ export const vulnerabilitiesApi = {
 
     getDescriptiveVulnerabilities: async (type: 'sites' | 'servers'): Promise<any[]> => {
         const response = await api.get(`/vulnerabilities/getDescritivos/?type=${type}`);
+        return response.data;
+    },
+};
+
+export const userManagementApi = {
+    getAllUsers: async (): Promise<UserData[]> => {
+        const response = await api.get('/auth/users');
+        return response.data;
+    },
+
+    addUser: async (userData: UserData): Promise<{ message: string; user_id: string }> => {
+        const response = await api.post('/auth/register', userData);
+        return response.data;
+    },
+
+    updateUser: async (userId: string, userData: Partial<UserData>): Promise<{ message: string }> => {
+        const response = await api.put(`/auth/users/${userId}`, userData);
+        return response.data;
+    },
+
+    deleteUser: async (userId: string): Promise<{ message: string }> => {
+        const response = await api.delete(`/auth/users/${userId}`);
         return response.data;
     },
 };

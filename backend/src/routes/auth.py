@@ -116,3 +116,36 @@ def delete_user(user_id):
     except Exception as e:
         print(f"Erro ao deletar usuário: {e}")
         return jsonify({"error": "Erro interno ao deletar usuário."}), 500
+    
+@auth_bp.route('/users/<string:user_id>', methods=['PUT']) # NOVO: Rota para atualizar usuário
+def update_user(user_id):
+    # Em uma aplicação real, aqui você verificaria o token JWT e o perfil do usuário
+    # para garantir que apenas administradores possam atualizar outros usuários,
+    # e que um usuário não-admin não possa escalar privilégios.
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Dados não fornecidos."}), 400
+
+    try:
+        # Apenas os campos 'name', 'email', 'profile' podem ser atualizados por esta rota.
+        # A senha não deve ser atualizada aqui (teria uma rota separada ou processo de redefinição).
+        update_data = {}
+        if 'name' in data:
+            update_data['name'] = data['name']
+        if 'email' in data:
+            update_data['email'] = data['email']
+        if 'profile' in data:
+            if data['profile'] not in ['User', 'Administrator']:
+                return jsonify({"error": "Perfil inválido. Use 'User' ou 'Administrator'."}), 400
+            update_data['profile'] = data['profile']
+
+        if not update_data:
+            return jsonify({"message": "Nenhum dado válido para atualização fornecido."}), 200
+
+        result = db_instance.update_one("users", {"_id": ObjectId(user_id)}, update_data)
+        if result.modified_count == 0:
+            return jsonify({"message": "Usuário não encontrado ou nenhum dado alterado."}), 404
+        return jsonify({"message": "Usuário atualizado com sucesso."}), 200
+    except Exception as e:
+        print(f"Erro ao atualizar usuário {user_id}: {e}")
+        return jsonify({"error": "Erro interno ao atualizar usuário."}), 500
