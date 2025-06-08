@@ -1,50 +1,26 @@
 from collections import defaultdict
 import os
 import pandas as pd
-# Importa _load_data do json_utils.py (no mesmo nível ou de core)
-from .json_utils import _load_data 
+import re # Adicionado: Importar regex
+import unicodedata # Adicionado: Importar unicodedata
 
-# CSV_PATH será removido daqui, pois a criação/adição de linhas CSV
-# será gerenciada no módulo de processamento de dados, que terá acesso à Config
-# CSV_PATH = "data/relatórios_prontos/vulnerabilidades_agrupadas_por_site.csv" 
-# Remover essa linha
+from .json_utils import _load_data # Modificado: Importa _load_data do json_utils.py
 
 def formatar_uri(target: str, uri: str) -> str:
     """
     Formata a URI com o domínio do alvo e a URI específica.
-
-    Parâmetros:
-    - target (str): O domínio do alvo.
-    - uri (str): A URI específica da vulnerabilidade.
-
-    Retorna:
-    - str: URI formatada.
     """
     return f"{target}{uri}"
 
 def limpar_protocolos_url(target: str) -> str:
     """
     Limpa o nome do site para remover 'http://', 'https://' e outros elementos.
-    
-    Parâmetros:
-    - target (str): URL do site.
-    
-    Retorno:
-    - str: Nome do site limpo.
     """
-    # A verificação '.saude' pode ser específica e talvez deva ser configurável
-    # ou tratada de forma mais genérica, mas mantemos por enquanto.
-    return target.replace('http://', '').replace('https://', '').split('.saude')[0]    
+    return target.replace('http://', '').replace('https://', '').split('.saude')[0]
 
 def contar_riscos(findings: list) -> dict:
     """
     Conta a quantidade de vulnerabilidades para cada nível de risco.
-
-    Parâmetros:
-    - findings (list): Lista de vulnerabilidades encontradas no arquivo JSON.
-
-    Retorno:
-    - dict: Contagem de vulnerabilidades por nível de risco.
     """
     risk_factor_counts = {'High': 0, 'Critical': 0, 'Low': 0, 'Medium': 0}
 
@@ -62,9 +38,8 @@ def contar_riscos(findings: list) -> dict:
 
     return risk_factor_counts
 
-
 def verificar_e_salvar_vulnerabilidades_ausentes(
-    vulnerabilidades_identificadas: dict, # Pode ser defaultdict ou dict normal
+    vulnerabilidades_identificadas: dict,
     caminho_json_descricoes: str,
     caminho_diretorio_txt: str,
     nome_arquivo_txt: str
@@ -72,31 +47,19 @@ def verificar_e_salvar_vulnerabilidades_ausentes(
     """
     Verifica quais vulnerabilidades identificadas não possuem descrição no JSON
     de descrições e salva as ausentes em um arquivo TXT.
-    Lida com defaultdicts (chaves como (nome, id)) ou dicionários simples (chaves como nome).
-
-    Args:
-        vulnerabilidades_identificadas (dict): Um dicionário de vulnerabilidades,
-            onde as chaves podem ser (nome_vulnerabilidade, id_vulnerabilidade) ou
-            apenas nome_vulnerabilidade (string).
-        caminho_json_descricoes (str): O caminho completo para o arquivo JSON
-            que contém as descrições das vulnerabilidades.
-        caminho_diretorio_txt (str): O caminho do diretório onde o arquivo TXT será salvo.
-        nome_arquivo_txt (str): O nome do arquivo TXT.
-
-    Returns:
-        tuple[bool, str, list[str]]: Uma tupla (True, mensagem de sucesso, lista_de_ausentes)
-        ou (False, mensagem de erro, lista_de_ausentes).
     """
-    # Usando _load_data do core.json_utils
-    vulnerabilidades_json_data = _load_data(caminho_json_descricoes)
-    
-    # Se o _load_data_ foi usado para carregar o JSON descritivo, ele retorna um dict
-    # com a chave "vulnerabilidades", então precisamos ajustar como acessamos os dados.
+    vulnerabilidades_json_data = _load_data(caminho_json_descricoes) # Usando _load_data
+
+    # Acessa a lista de vulnerabilidades dentro do dicionário retornado por _load_data
     if isinstance(vulnerabilidades_json_data, dict) and "vulnerabilidades" in vulnerabilidades_json_data:
         vulnerabilidades_json = vulnerabilidades_json_data["vulnerabilidades"]
+    elif isinstance(vulnerabilidades_json_data, list):
+        # Isso pode acontecer se o arquivo json_descricoes for apenas uma lista diretamente
+        vulnerabilidades_json = vulnerabilidades_json_data
     else:
-        vulnerabilidades_json = vulnerabilidades_json_data # Se já for a lista direta
-        
+        print(f"Aviso: Conteúdo inesperado em '{caminho_json_descricoes}'. Esperado um dicionário com 'vulnerabilidades' ou uma lista.")
+        vulnerabilidades_json = []
+
     vulnerabilidades_nomes_json = {
         vuln.get('Vulnerabilidade') for vuln in vulnerabilidades_json if vuln.get('Vulnerabilidade')
     }
@@ -106,9 +69,9 @@ def verificar_e_salvar_vulnerabilidades_ausentes(
     for chave_vuln_identificada in vulnerabilidades_identificadas.keys():
         vuln_nome = ""
         if isinstance(chave_vuln_identificada, tuple) and len(chave_vuln_identificada) >= 1:
-            vuln_nome = chave_vuln_identificada[0] # Pega o nome da tupla (nome, id)
+            vuln_nome = chave_vuln_identificada[0]
         elif isinstance(chave_vuln_identificada, str):
-            vuln_nome = chave_vuln_identificada # A chave já é o nome
+            vuln_nome = chave_vuln_identificada
         else:
             print(f"Aviso: Tipo de chave inesperado encontrado: {type(chave_vuln_identificada)}. Pulando.")
             continue
@@ -137,7 +100,6 @@ def verificar_e_salvar_vulnerabilidades_ausentes(
     except Exception as e:
         return False, f"Erro inesperado ao salvar TXT: {e}", vulnerabilidades_nao_encontradas
 
-# --- Funções auxiliares (para o seu backend/app.py) ---
 def extrair_nomes_vulnerabilidades_identificadas(vulnerabilidades_agrupadas: defaultdict) -> list[str]:
     """
     Extrai uma lista única de nomes de vulnerabilidades a partir do defaultdict.
@@ -146,3 +108,24 @@ def extrair_nomes_vulnerabilidades_identificadas(vulnerabilidades_agrupadas: def
     for (vuln_nome, vuln_id) in vulnerabilidades_agrupadas.keys():
         nomes_unicos.add(vuln_nome)
     return list(nomes_unicos)
+
+# NOVO: Função de sanitização robusta para strings
+def sanitize_string(text: str, remove_accents: bool = False, to_title_case: bool = False) -> str:
+    """
+    Sanitiza uma string para uso em dados de vulnerabilidade.
+    Remove espaços extras, normaliza espaços internos, e opcionalmente
+    remove acentos e converte para título.
+    """
+    if not isinstance(text, str):
+        return ""
+
+    text = text.strip()
+    text = re.sub(r'\s+', ' ', text)
+
+    if remove_accents:
+        text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
+
+    if to_title_case:
+        text = text.title()
+
+    return text

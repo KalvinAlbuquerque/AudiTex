@@ -278,5 +278,13 @@
         "Descrição": "O servidor SSH remoto está vulnerável a um ataque conhecido como Terrapin, que explora uma fraqueza na verificação de integridade durante a troca de chaves. Essa vulnerabilidade permite que um invasor, posicionado entre o cliente e o servidor (man-in-the-middle), manipule o início da comunicação SSH truncando mensagens iniciais.\nO ataque pode resultar em redução do nível de segurança da conexão (downgrade) ou mesmo na bypass de mecanismos de integridade, comprometendo a confidencialidade e autenticidade da sessão SSH estabelecida.\nEsta verificação identifica servidores SSH que:\nSuportam os algoritmos ChaCha20-Poly1305 ou CBC com Encrypt-then-MAC;\nNão implementam as contramedidas de verificação estrita de troca de chaves (strict key exchange).\nImportante: o teste não verifica diretamente a versão do software SSH, apenas o suporte a algoritmos e ausência de contramedidas.",
         "Solução": "Atualize o software SSH com a versão que inclua as contramedidas rigorosas de troca de chaves contra o ataque Terrapin.\nDesative os algoritmos afetados (chacha20-poly1305@openssh.com e CBC com Encrypt-then-MAC), caso a atualização não seja viável no momento.",
         "Imagem": ""
+    },
+    {
+        "Vulnerabilidade": "Teste",
+        "Categoria": "Vulnerabilidades Relacionadas À Execução Remota De Código",
+        "Subcategoria": "Execução Remota Via Serviços E Protocolos",
+        "Descrição": "teste",
+        "Solução": "teste",
+        "Imagem": "images-was/vulnerabilidades-relacionadas-a-execucao-remota-de-codigo/execucao-remota-via-servicos-e-protocolos/teste.jpg"
     }
 ]

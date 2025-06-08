@@ -111,7 +111,7 @@ def gerarRelatorioDeLista():
 
         if not data:
             return jsonify({"error": "Dados não fornecidos"}), 400
-        
+
         id_lista = data.get("idLista")
         nome_secretaria = data.get("nomeSecretaria")
         sigla_secretaria = data.get("siglaSecretaria")
@@ -128,7 +128,7 @@ def gerarRelatorioDeLista():
         except Exception:
             db_instance.close()
             return jsonify({"error": "ID de lista inválido."}), 400
-        
+
         lista_doc = db_instance.find_one("listas", {"_id": objeto_id})
 
         if not lista_doc:
@@ -137,8 +137,6 @@ def gerarRelatorioDeLista():
 
         criado_por_vm_scan = lista_doc.get("scanStoryIdCriadoPor", "Não informado")
 
-        # Antes de qualquer coisa, defina os caminhos para salvar os gráficos no template base
-        # Estes são os caminhos "não dinâmicos" no template
         base_report_template_path = Path(config.caminho_report_templates_base)
         static_vm_donut_output_path = str(base_report_template_path / "assets" / "images-vmscan" / "total-vulnerabilidades-vm-donut.png")
         static_webapp_donut_output_path = str(base_report_template_path / "assets" / "images-was" / "total-vulnerabilidades-was-donut.png")
@@ -150,11 +148,9 @@ def gerarRelatorioDeLista():
             {"nome": nome_secretaria, "id_lista": id_lista, "destino_relatorio_preprocessado" : None}
         ).inserted_id
 
-        # Define a pasta temporária para arquivos intermediários do relatório
-        # NOTA: Essa pasta é diferente da pasta final RelatorioPronto, que será copiada do template
         pasta_destino_relatorio_temp_base = Path(config.caminho_shared_relatorios) / str(novo_relatorio_id) / "relatorio_preprocessado"
         pasta_destino_relatorio_temp_base.mkdir(parents=True, exist_ok=True)
-        
+
         db_instance.update_one(
             "relatorios",
             {"_id": novo_relatorio_id},
@@ -166,14 +162,13 @@ def gerarRelatorioDeLista():
         webapp_risk_counts = {'Critical': '0', 'High': '0', 'Medium': '0', 'Low': '0'}
         total_sites = '0'
         total_vulnerabilidades_web = '0'
-        
+
         if lista_doc.get("pastas_scans_webapp") and os.path.exists(lista_doc["pastas_scans_webapp"]) and len(os.listdir(lista_doc["pastas_scans_webapp"])) > 0:
             pasta_scans_da_lista_webapp = lista_doc["pastas_scans_webapp"]
-            # Processa e extrai dados para o relatorio TXT e CSV intermediário para WebApp
             processar_relatorio_json(pasta_scans_da_lista_webapp, str(pasta_destino_relatorio_temp_base))
             output_csv_path = str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv")
             extrair_quantidades_vulnerabilidades_por_site(output_csv_path, pasta_scans_da_lista_webapp)
-            
+
             with open(webapp_report_txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 total_sites_match = re.search(r'Total de sites:\s*(\d+)', content)
@@ -190,14 +185,10 @@ def gerarRelatorioDeLista():
                 if medium_match: webapp_risk_counts['Medium'] = medium_match.group(1)
                 if low_match: webapp_risk_counts['Low'] = low_match.group(1)
 
-            # GERAR GRÁFICO DONUT WEBAPP NO DIRETÓRIO DO TEMPLATE BASE
             webapp_risk_counts_int = {k: int(v) for k, v in webapp_risk_counts.items()}
             if not gerar_grafico_donut_webapp(webapp_risk_counts_int, static_webapp_donut_output_path):
                 print(f"Aviso: Gráfico donut para WebApp não foi gerado (sem dados ou erro). O arquivo {static_webapp_donut_output_path} pode não existir.")
-            
-            # Gerar o gráfico de vulnerabilidades por site diretamente na pasta de destino do relatório
-            # Este gráfico é específico de cada relatório, não deve ir para o template base
-            #graph_output_webapp_x_site_full_path = str(pasta_destino_relatorio_temp_base / "RelatorioPronto" / "assets" / "images-was" / "vulnerabilidades-x-site.png")
+
             gerar_Grafico_Quantitativo_Vulnerabilidades_Por_Site(
                 str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv"),
                 static_webapp_x_site_output_path,
@@ -207,7 +198,6 @@ def gerarRelatorioDeLista():
 
         else:
             print(f"Aviso: Não há scans WebApp na pasta {lista_doc.get('pastas_scans_webapp')} ou a pasta está vazia. Pulando processamento WebApp.")
-            # Garante que arquivos essenciais para o LaTeX existam mesmo sem dados
             pd.DataFrame(columns=['Site', 'Critical', 'High', 'Medium', 'Low', 'Total']).to_csv(str(pasta_destino_relatorio_temp_base / "vulnerabilidades_agrupadas_por_site.csv"), index=False)
             webapp_report_txt_path.touch()
             (pasta_destino_relatorio_temp_base / "(LATEX)Sites_agrupados_por_vulnerabilidades.txt").touch()
@@ -216,11 +206,16 @@ def gerarRelatorioDeLista():
         servers_report_txt_path = pasta_destino_relatorio_temp_base / "Servidores_agrupados_por_vulnerabilidades.txt"
         servers_risk_counts = {'critical': '0', 'high': '0', 'medium': '0', 'low': '0'}
         total_vulnerabilidade_vm = '0'
-        
-        if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan"):
-            pasta_scans_da_lista_vm = lista_doc["pastas_scans_webapp"] # Certifique-se que esta variável aponta para o diretório correto de scans VM
+
+        # Verificação se o CSV de servidores existe na pasta de scans
+        csv_servidor_path = None
+        if lista_doc.get("pastas_scans_webapp"): # 'pastas_scans_webapp' é o diretório onde o CSV do VM scan é salvo
+            csv_servidor_path = Path(lista_doc["pastas_scans_webapp"]) / "servidores_scan.csv"
+
+        if lista_doc.get("historyid_scanservidor") and lista_doc.get("id_scan") and csv_servidor_path and csv_servidor_path.exists():
+            pasta_scans_da_lista_vm = lista_doc["pastas_scans_webapp"]
             processar_relatorio_csv(pasta_scans_da_lista_vm, str(pasta_destino_relatorio_temp_base))
-            
+
             with open(servers_report_txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 total_vulnerabilidade_vm_match = re.search(r'Total de Vulnerabilidades:\s*(\d+)', content)
@@ -235,24 +230,18 @@ def gerarRelatorioDeLista():
                 if medium_match: servers_risk_counts['medium'] = medium_match.group(1)
                 if low_match: servers_risk_counts['low'] = low_match.group(1)
 
-            # GERAR GRÁFICO DONUT VM NO DIRETÓRIO DO TEMPLATE BASE
             vm_risk_counts_int = {k: int(v) for k, v in servers_risk_counts.items()}
             if not gerar_grafico_donut(vm_risk_counts_int, static_vm_donut_output_path):
                 print(f"Aviso: Gráfico donut para servidores não foi gerado (sem dados ou erro). O arquivo {static_vm_donut_output_path} pode não existir.")
         else:
-            print("Aviso: Não há scans de Servidores associados a esta lista. Pulando processamento de Servidores.")
+            print("Aviso: Não há scans de Servidores associados a esta lista ou o arquivo CSV não foi encontrado. Pulando processamento de Servidores.")
             servers_report_txt_path.touch()
             (pasta_destino_relatorio_temp_base / "(LATEX)Servidores_agrupados_por_vulnerabilidades.txt").touch()
 
-        # Define a pasta final do relatório para compilação LaTeX.
-        # Esta pasta será o resultado da cópia da estrutura do template.
-        pasta_final_latex = pasta_destino_relatorio_temp_base / "RelatorioPronto" 
+        pasta_final_latex = pasta_destino_relatorio_temp_base / "RelatorioPronto"
 
-        # Os caminhos relativos para o LaTeX são fixos, pois as imagens estarão na pasta assets copiada
-        graph_output_vm_donut_relative = "assets/images-vmscan/total-vulnerabilidades-vm-donut.png"
-        graph_output_webapp_donut_relative = "assets/images-was/total-vulnerabilidades-was-donut.png"
+        total_vulnerabilidades_combinado = int(total_vulnerabilidades_web) + int(total_vulnerabilidade_vm)
 
-        vulnerabilidade_x_site_png_path = "images-was/vulnerabilidades-x-site.png" 
         terminar_relatorio_preprocessado(
             nome_secretaria,
             sigla_secretaria,
@@ -260,8 +249,8 @@ def gerarRelatorioDeLista():
             data_fim,
             ano,
             mes,
-            str(pasta_destino_relatorio_temp_base), # Passa a pasta base dos pre-processados
-            str(pasta_final_latex / "main.tex"), # Caminho para o main.tex final
+            str(pasta_destino_relatorio_temp_base),
+            str(pasta_final_latex / "main.tex"),
             google_drive_link,
             total_vulnerabilidades_web,
             total_vulnerabilidade_vm,
@@ -274,23 +263,30 @@ def gerarRelatorioDeLista():
             servers_risk_counts['medium'],
             servers_risk_counts['low'],
             total_sites,
-            criado_por_vm_scan, 
-            graph_output_vm_donut_relative, 
-            graph_output_webapp_donut_relative,
-            vulnerabilidade_x_site_png_path
+            criado_por_vm_scan,
+            static_vm_donut_output_path, # Passa o caminho completo da imagem gerada no template base
+            static_webapp_donut_output_path, # Passa o caminho completo da imagem gerada no template base
+            static_webapp_x_site_output_path # Passa o caminho completo da imagem gerada no template base
         )
-        
-        compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
-        compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
 
+        # NOVO: Chamar compilar_latex e verificar o status
+        success, message = compilar_latex(os.path.join(str(pasta_final_latex), "main.tex"), str(pasta_final_latex))
+
+        if not success:
+            # Se a compilação falhou (incluindo erro de imagem), retorna um erro para o frontend
+            db_instance.close()
+            # Retorne um status 500 ou 400 dependendo da natureza do erro, e a mensagem detalhada.
+            return jsonify({"error": f"Falha na geração do PDF: {message}"}), 500
+
+        # Se a compilação foi bem-sucedida
         db_instance.update_one("listas", {"_id": objeto_id}, {"relatorioGerado": True})
         db_instance.close()
 
-        return str(novo_relatorio_id), 200
+        return jsonify(str(novo_relatorio_id)), 200 # Retorna o ID do relatório gerado com sucesso
 
     except Exception as e:
         print(f"Erro ao gerar relatório de lista: {str(e)}")
-        traceback.print_exc() 
+        traceback.print_exc()
         if 'db_instance' in locals() and db_instance.client:
             db_instance.close()
         return jsonify({"error": f"Erro interno ao gerar relatório: {str(e)}"}), 500
