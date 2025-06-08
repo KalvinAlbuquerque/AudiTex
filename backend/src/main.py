@@ -74,9 +74,55 @@ def create_default_admin_user_if_not_exists():
         db_instance.close()
 
 
+def create_default_admin_user_if_not_exists():
+    db_instance = Database()
+    try:
+        admin_login = "admin"
+        admin_password = "admin"
+
+        existing_user = db_instance.find_one("users", {"login": admin_login})
+        if not existing_user:
+            print("Criando usuário administrador padrão da aplicação...")
+
+            new_admin_user = User(
+                login=admin_login,
+                password=admin_password,
+                name=os.getenv("DEFAULT_ADMIN_NAME", "Administrador Teste"),
+                email=os.getenv("DEFAULT_ADMIN_EMAIL", "admin@example.com"),
+                profile="Administrator"
+            )
+
+            db_instance.insert_one("users", {
+                "login": new_admin_user.login,
+                "password": new_admin_user.password,
+                "name": new_admin_user.name,
+                "email": new_admin_user.email,
+                "profile": new_admin_user.profile
+            })
+            print(f"Usuário administrador da aplicação '{new_admin_user.login}' criado com sucesso na coleção 'users'.")
+            print(f"SENHA SALVA PARA '{new_admin_user.login}': {new_admin_user.password} (sem hash, apenas para debug!)") # AVISO CLARO
+        else:
+            print(f"Usuário '{admin_login}' já existe, não será recriado.")
+    except Exception as e:
+        print(f"Erro ao tentar criar usuário administrador padrão da aplicação: {e}")
+    finally:
+        db_instance.close()
+
+# NOVO: Função para garantir que a coleção de logs exista
+def ensure_logs_collection_exists():
+    db_instance = Database()
+    try:
+        db_instance.db.create_collection('logs')
+        print("Coleção 'logs' assegurada.")
+    except Exception as e:
+        print(f"Erro ao assegurar coleção 'logs': {e}")
+    finally:
+        db_instance.close()
+
 # Executa a configuração inicial do banco de dados da aplicação quando o Flask inicia
 with app.app_context():
     create_default_admin_user_if_not_exists()
+    ensure_logs_collection_exists() # NOVO: Garante a coleção de logs
 # --- FIM DO NOVO BLOCO ---
 
 if __name__ == "__main__":

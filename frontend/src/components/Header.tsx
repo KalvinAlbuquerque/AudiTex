@@ -39,7 +39,7 @@ function Header() { // Removendo a prop isTransparent
                     onClick={() => navigate('/home')}
                 />
                 <h1 className={`text-2xl font-bold ${textColorClass} cursor-pointer`} onClick={() => navigate('/home')}>
-                    Auditex
+                    AUDITEX
                 </h1>
             </div>
             <nav>
@@ -86,6 +86,14 @@ function Header() { // Removendo a prop isTransparent
                                             className={`${textColorClass} ${linkHoverClass} transition duration-300 ease-in-out`}
                                         >
                                             Gerenciar Usuários
+                                        </button>
+                                    </li>
+                                    <li> 
+                                        <button
+                                            onClick={() => navigate('/ver-logs')}
+                                            className={`${textColorClass} ${linkHoverClass} transition duration-300 ease-in-out`}
+                                        >
+                                            Ver Logs
                                         </button>
                                     </li>
                                 </>
